@@ -93,19 +93,21 @@ if (prefaceGroups.size > 0) {
 		{
 			preface && (
 				<section class="flex flex-col">
-					<figure class="max-w-2xl mx-auto my-8">
-						<p class="font-serif font-thin text-lg md:text-xl text-gray-800 leading-relaxed">
+					<blockquote class="b-l-4 b-l-solid b-shadow pl-4 my-4">
+						<p class="c-primary text-lg font-thin line-height-loose italic mb-2">
 							"{preface.body}"
 						</p>
+					</blockquote>
+					<footer class="flex justify-between items-center mt-3 pt-2 b-t b-t-dashed b-weak text-sm c-remark">
 						{preface.data.title && (
-							<figcaption class="text-right mt-4 pr-2 font-serif text-stone-500 italic">
+							<cite class="not-italic font-normal">
 								{preface.data.title}
-							</figcaption>
+							</cite>
 						)}
-					</figure>
-					<a href={getRelativeLocaleUrl(locale, "/preface")} class="self-end my-2 text-size-sm c-secondary">
-						—— {Time.date.locale(preface.data.timestamp, locale)}
-					</a>
+						<a href={getRelativeLocaleUrl(locale, "/preface")} class="c-secondary hover:c-primary transition-colors">
+							{Time.date.locale(preface.data.timestamp, locale)}
+						</a>
+					</footer>
 				</section>
 			)
 		}
