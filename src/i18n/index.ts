@@ -3,14 +3,13 @@ import { i18n } from "astro:config/client";
 // Import translation files for different locales
 import zhCN from "./zh-cn.yaml";
 import en from "./en.yaml";
-import ja from "./ja.yaml";
 
 // Translation object mapping locale codes to their respective translation data
-const translations = { "zh-cn": zhCN, en, ja };
+const translations = { "zh-cn": zhCN, en };
 
 /**
  * Create an internationalization function for a specific language
- * @param language - The target language/locale code (e.g., "en", "zh-cn", "ja")
+ * @param language - The target language/locale code (e.g., "en", "zh-cn")
  * @returns Translation function that can translate keys with parameter substitution
  */
 function i18nit(language: string): (key: string, params?: Record<string, string | number>) => string {

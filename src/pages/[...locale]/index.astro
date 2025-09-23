@@ -1,6 +1,6 @@
 ---
 import { i18n } from "astro:config/client";
-import { render, getCollection } from "astro:content";
+import { getCollection } from "astro:content";
 import { getRelativeLocaleUrl } from "astro:i18n";
 import { Icon } from "astro-icon/components";
 import Time from "$utils/time";
@@ -50,11 +50,37 @@ const jottings = await getCollection("jotting", jotting => {
 	return !jotting.data.draft && language == locale;
 });
 
-// Get the most recent note and preface for display
+// Get the most recent note for display
 const newest = notes[0];
-const preface = prefaces[0];
-// Render preface content if available, otherwise use empty object
-const { Content } = preface ? await render(preface) : ({} as any);
+
+// Get all prefaces for random selection (across all languages)
+const allPrefaces = await getCollection("preface", preface => preface.data.random);
+
+// Group prefaces by ID (same content in different languages)
+const prefaceGroups = new Map();
+allPrefaces.forEach(preface => {
+	const [language, id] = preface.id.split("/");
+	if (!prefaceGroups.has(id)) {
+		prefaceGroups.set(id, {});
+	}
+	prefaceGroups.get(id)[language] = preface;
+});
+
+// Select a random preface group and get the version for current locale
+let preface = null;
+if (prefaceGroups.size > 0) {
+	// Generate a true random number for each page load
+	const randomIndex = Math.floor(Math.random() * prefaceGroups.size);
+	const selectedGroup = Array.from(prefaceGroups.values())[randomIndex];
+
+	// Try to get the preface for current locale, fallback to any available language
+	preface = selectedGroup[locale] || Object.values(selectedGroup)[0];
+} else if (prefaces.length > 0) {
+	// Fallback to most recent preface if no random prefaces available
+	preface = prefaces[0];
+}
+
+// Preface content is now available directly from preface.body
 ---
 
 <Base title={t("navigation.home")} {locale}>
@@ -67,9 +93,16 @@ const { Content } = preface ? await render(preface) : ({} as any);
 		{
 			preface && (
 				<section class="flex flex-col">
-					<article class="markdown">
-						<Content />
-					</article>
+					<figure class="max-w-2xl mx-auto my-8">
+						<p class="font-serif font-thin text-lg md:text-xl text-gray-800 leading-relaxed">
+							"{preface.body}"
+						</p>
+						{preface.data.title && (
+							<figcaption class="text-right mt-4 pr-2 font-serif text-stone-500 italic">
+								{preface.data.title}
+							</figcaption>
+						)}
+					</figure>
 					<a href={getRelativeLocaleUrl(locale, "/preface")} class="self-end my-2 text-size-sm c-secondary">
 						—— {Time.date.locale(preface.data.timestamp, locale)}
 					</a>
