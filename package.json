@@ -35,6 +35,7 @@
 		"count": "git log --pretty=tformat: --numstat | grep -v package | awk '{ A += $1; S += $2; T += $1 - $2 } END { printf \"+ %s\tLines\\n- %s\tLines\\n= %s\tLines\\n\", A, S, T }'"
 	},
 	"dependencies": {
+		"@astrojs/node": "^9.4.4",
 		"@astrojs/sitemap": "^3.6.0",
 		"@astrojs/svelte": "^7.1.1",
 		"@astrojs/vercel": "^8.2.7",
