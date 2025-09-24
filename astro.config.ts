@@ -1,13 +1,13 @@
 // @ts-check
 import { defineConfig, passthroughImageService } from "astro/config";
-// import vercel from "@astrojs/vercel";
+import vercel from "@astrojs/vercel";
 import yaml from "@rollup/plugin-yaml";
 import sitemap from "@astrojs/sitemap";
 import svelte from "@astrojs/svelte";
 import UnoCSS from "unocss/astro";
 import swup from "@swup/astro";
 import icon from "astro-icon";
-import github_light from "shiki/themes/github-light.mjs";
+import github_light from "shiki/themes/github-light.mjs"
 
 import GFM from "remark-gfm";
 import ins from "remark-ins";
@@ -17,7 +17,7 @@ import CJK_strikethrough from "remark-cjk-friendly-gfm-strikethrough";
 import math from "remark-math";
 import gemoji from "remark-gemoji";
 import footnote from "remark-footnotes-extra";
-import { extendedTableHandlers as table_handler, remarkExtendedTable as table } from "remark-extended-table";
+import { remarkExtendedTable as table, extendedTableHandlers as table_handler } from "remark-extended-table";
 import directive from "remark-directive";
 import ruby from "remark-ruby-directive";
 import alerts from "remark-github-blockquote-alert";
@@ -34,29 +34,41 @@ import abbr from "./src/utils/remark/abbr";
 import wrapper from "./src/utils/remark/table-wrapper";
 import copy from "./src/utils/code-copy";
 
-// import node from "@astrojs/node";
-
 // https://astro.build/config
 export default defineConfig({
-	// adapter: vercel(),  // Comment out for GitHub Pages
+	adapter: vercel(),  // See https://docs.astro.build/en/guides/deploy/ for more information about deploying Astro apps.
 	site: "https://davidhlp.github.io/",
 	trailingSlash: "never",
-
 	i18n: {
 		locales: ["en", "zh-cn"],
 		defaultLocale: "en",
 		routing: {
 			redirectToDefaultLocale: false,
-			prefixDefaultLocale: false
+			prefixDefaultLocale: false,
 		}
 	},
-
 	image: {
-		service: passthroughImageService()
+		service: passthroughImageService(),
 	},
-
 	markdown: {
-		remarkPlugins: [[GFM, { singleTilde: false }], ins, mark, spoiler, CJK, [CJK_strikethrough, { singleTilde: false }], math, gemoji, footnote, abbr, wrapper, [table, { colspanWithEmpty: true }], wrapper, directive, ruby, [alerts, { legacyTitle: true }]],
+		remarkPlugins: [
+			[GFM, { singleTilde: false }],
+			ins,
+			mark,
+			spoiler,
+			CJK,
+			[CJK_strikethrough, { singleTilde: false }],
+			math,
+			gemoji,
+			footnote,
+			abbr,
+			wrapper,
+			[table, { colspanWithEmpty: true }],
+			wrapper,
+			directive,
+			ruby,
+			[alerts, { legacyTitle: true }]
+		],
 		remarkRehype: {
 			footnoteLabel: null,
 			footnoteLabelTagName: "p",
@@ -67,7 +79,14 @@ export default defineConfig({
 				...table_handler
 			}
 		},
-		rehypePlugins: [ids, [anchor, { behavior: "append", content: { type: "text", value: "󰌷" } }], [links, { target: "_blank", rel: ["nofollow", "noopener", "noreferrer"] }], katex, figure, sectionize],
+		rehypePlugins: [
+			ids,
+			[anchor, { behavior: "append", content: { type: "text", value: "󰌷" } }],
+			[links, { target: "_blank", rel: ["nofollow", "noopener", "noreferrer"] }],
+			katex,
+			figure,
+			sectionize
+		],
 		smartypants: false,
 		shikiConfig: {
 			themes: {
@@ -82,15 +101,13 @@ export default defineConfig({
 			transformers: [
 				copy({
 					duration: 1500
-				})
+				}),
 			]
 		}
 	},
-
 	vite: {
 		plugins: [yaml()]
 	},
-
 	integrations: [
 		svelte(),
 		sitemap(),
@@ -105,15 +122,76 @@ export default defineConfig({
 		}),
 		icon({
 			include: {
-				"fa6-brands": ["creative-commons", "creative-commons-by", "creative-commons-sa", "creative-commons-nc", "creative-commons-nd", "creative-commons-zero"],
-				lucide: ["align-justify", "arrow-left", "arrow-right", "arrow-up-to-line", "at-sign", "calendar", "circle-alert", "circle-check", "circle-question-mark", "circle-x", "clock-arrow-down", "clock-arrow-up", "copyright", "earth", "ellipsis", "feather", "file-search", "flag-triangle-right", "history", "house", "info", "library", "list", "log-out", "message-square", "moon", "pencil", "pilcrow", "refresh-cw", "reply", "rss", "scale", "send", "share-2", "signature", "siren", "smile", "sun", "tag", "tent", "timer", "trash", "triangle-alert", "user-round", "user-round-pen", "user-round-x", "x"],
-				"simple-icons": ["astro", "svelte", "github", "google", "x"],
-				"svg-spinners": ["3-dots-move", "pulse-3", "pulse-rings-3"]
+				"fa6-brands": [
+					"creative-commons",
+					"creative-commons-by",
+					"creative-commons-sa",
+					"creative-commons-nc",
+					"creative-commons-nd",
+					"creative-commons-zero"
+				],
+				lucide: [
+					"align-justify",
+					"arrow-left",
+					"arrow-right",
+					"arrow-up-to-line",
+					"at-sign",
+					"calendar",
+					"circle-alert",
+					"circle-check",
+					"circle-question-mark",
+					"circle-x",
+					"clock-arrow-down",
+					"clock-arrow-up",
+					"copyright",
+					"earth",
+					"ellipsis",
+					"feather",
+					"file-search",
+					"flag-triangle-right",
+					"history",
+					"house",
+					"info",
+					"library",
+					"list",
+					"log-out",
+					"message-square",
+					"moon",
+					"pencil",
+					"pilcrow",
+					"refresh-cw",
+					"reply",
+					"rss",
+					"scale",
+					"send",
+					"share-2",
+					"signature",
+					"siren",
+					"smile",
+					"sun",
+					"tag",
+					"tent",
+					"timer",
+					"trash",
+					"triangle-alert",
+					"user-round",
+					"user-round-pen",
+					"user-round-x",
+					"x"
+				],
+				"simple-icons": [
+					"astro",
+					"svelte",
+					"github",
+					"google",
+					"x",
+				],
+				"svg-spinners": [
+					"3-dots-move",
+					"pulse-3",
+					"pulse-rings-3"
+				]
 			}
 		})
-	],
-
-	// adapter: node({
-	//	mode: "standalone"
-	// })
+	]
 });
