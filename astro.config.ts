@@ -40,6 +40,7 @@ import copy from "./src/utils/code-copy";
 export default defineConfig({
 	// adapter: vercel(),  // Comment out for GitHub Pages
 	site: "https://davidhlp.github.io/",
+	output: "static",
 	trailingSlash: "never",
 
 	i18n: {
