@@ -1,31 +1,42 @@
 ---
 import { i18n } from "astro:config/client";
-import { actions } from "astro:actions";
+import { getCollection } from "astro:content";
 import Base from "$layouts/Base.astro";
 import Note from "$components/note/Note.svelte";
 import Icon from "$components/Icon.astro";
 import i18nit from "$i18n";
 
-export const prerender = false;
+export const prerender = true;
 
 const { locale = i18n!.defaultLocale } = Astro.params;
 
 const t = i18nit(locale);
 
-const size = 20;
-const page = Number(Astro.url.searchParams.get("page")) || 1;
-const series = Astro.url.searchParams.get("series");
-const tags = Astro.url.searchParams.getAll("tag");
+// Get all notes for this locale
+const allNotes = await getCollection('note', (entry) => {
+	return entry.id.startsWith(locale + '/') && !entry.data.draft;
+});
 
-const { data, error } = await Astro.callAction(actions.note.list, { locale, size, page, series, tags });
-if (error) {
-	switch (error.code) {
-		default:
-			return Astro.redirect("/500", 302);
+// Sort notes by timestamp (newest first) and then by top priority
+const sortedNotes = allNotes.sort((a, b) => {
+	if (b.data.top !== a.data.top) {
+		return b.data.top - a.data.top;
 	}
-}
+	return new Date(b.data.timestamp).getTime() - new Date(a.data.timestamp).getTime();
+});
 
-const { notes, pages, page: index, series_list, tag_list } = data;
+// Static data for GitHub Pages
+const size = 20;
+const page = 1; // Static: always show first page for GitHub Pages
+const notes = sortedNotes.slice(0, size);
+const pages = Math.ceil(allNotes.length / size);
+const index = page;
+
+// Extract unique series and tags
+const series_list = [...new Set(allNotes.map(note => note.data.series).filter(Boolean))];
+const tag_list = [...new Set(allNotes.flatMap(note => note.data.tags || []))];
+const series = null; // Static: no series filter for GitHub Pages
+const tags: string[] = []; // Static: no tag filter for GitHub Pages
 ---
 
 <Base title={t("navigation.note")} {locale}>

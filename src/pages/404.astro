@@ -4,7 +4,7 @@ import { getRelativeLocaleUrl } from "astro:i18n";
 import Base from "$layouts/Base.astro";
 import i18nit from "$i18n";
 
-export const prerender = false;
+export const prerender = true;
 
 const locale = Astro.currentLocale ?? i18n!.defaultLocale;
 const t = i18nit(locale);

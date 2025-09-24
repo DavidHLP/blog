@@ -35,7 +35,7 @@ import copy from "./src/utils/code-copy";
 
 // GitHub Pages configuration
 export default defineConfig({
-	// Remove Vercel adapter for GitHub Pages
+	// GitHub Pages static configuration
 	output: "static", // Static site generation for GitHub Pages
 	site: process.env.GITHUB_PAGES_URL || "https://davidhlp.github.io",
 	base: process.env.GITHUB_PAGES_BASE || "/blog", // Repository name as base path
