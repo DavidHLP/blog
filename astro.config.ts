@@ -34,7 +34,7 @@ import abbr from "./src/utils/remark/abbr";
 import wrapper from "./src/utils/remark/table-wrapper";
 import copy from "./src/utils/code-copy";
 
-import node from "@astrojs/node";
+// import node from "@astrojs/node";
 
 // https://astro.build/config
 export default defineConfig({
@@ -113,7 +113,7 @@ export default defineConfig({
 		})
 	],
 
-	adapter: node({
-		mode: "standalone"
-	})
+	// adapter: node({
+	//	mode: "standalone"
+	// })
 });
