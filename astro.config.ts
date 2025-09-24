@@ -39,9 +39,7 @@ import node from "@astrojs/node";
 // https://astro.build/config
 export default defineConfig({
 	// adapter: vercel(),  // Comment out for GitHub Pages
-	site: "https://davidhlp.github.io",
-
-	base: "/blog",
+	site: "https://davidhlp.github.io/",
 	trailingSlash: "never",
 
 	i18n: {
