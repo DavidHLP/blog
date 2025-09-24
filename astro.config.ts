@@ -38,6 +38,7 @@ import copy from "./src/utils/code-copy";
 export default defineConfig({
 	adapter: vercel(),  // See https://docs.astro.build/en/guides/deploy/ for more information about deploying Astro apps.
 	site: "https://davidhlp.github.io/",
+	output: "static",
 	trailingSlash: "never",
 	i18n: {
 		locales: ["en", "zh-cn"],
