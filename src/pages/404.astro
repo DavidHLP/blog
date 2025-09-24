@@ -6,7 +6,7 @@ import i18nit from "$i18n";
 
 export const prerender = true;
 
-const locale = Astro.currentLocale ?? i18n!.defaultLocale;
+const locale = i18n!.defaultLocale; // 使用默认语言，因为这是静态预渲染
 const t = i18nit(locale);
 ---
 
