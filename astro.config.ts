@@ -45,7 +45,7 @@ export default defineConfig({
 	trailingSlash: "never",
 
 	i18n: {
-		locales: ["en", "zh-cn", "ja"],
+		locales: ["en", "zh-cn"],
 		defaultLocale: "en",
 		routing: {
 			redirectToDefaultLocale: false,
