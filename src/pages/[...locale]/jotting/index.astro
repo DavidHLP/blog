@@ -1,30 +1,40 @@
 ---
 import { i18n } from "astro:config/client";
-import { actions } from "astro:actions";
+import { getCollection } from "astro:content";
 import Base from "$layouts/Base.astro";
 import Jotting from "$components/Jotting.svelte";
 import Icon from "$components/Icon.astro";
 import i18nit from "$i18n";
 
-export const prerender = false;
+export const prerender = true;
 
 const { locale = i18n!.defaultLocale } = Astro.params;
 
 const t = i18nit(locale);
 
-const size = 20;
-const page = Number(Astro.url.searchParams.get("page")) || 1;
-const tags = Astro.url.searchParams.getAll("tag");
+// Get all jottings for this locale
+const allJottings = await getCollection('jotting', (entry) => {
+	return entry.id.startsWith(locale + '/') && !entry.data.draft;
+});
 
-const { data, error } = await Astro.callAction(actions.jotting.list, { locale, size, page, tags });
-if (error) {
-	switch (error.code) {
-		default:
-			return Astro.redirect("/500", 302);
+// Sort jottings by timestamp (newest first) and then by top priority
+const sortedJottings = allJottings.sort((a, b) => {
+	if (b.data.top !== a.data.top) {
+		return b.data.top - a.data.top;
 	}
-}
+	return new Date(b.data.timestamp).getTime() - new Date(a.data.timestamp).getTime();
+});
 
-const { jottings, pages, page: index, tag_list } = data;
+// Static data for GitHub Pages
+const size = 20;
+const page = 1; // Static: always show first page for GitHub Pages
+const jottings = sortedJottings.slice(0, size);
+const pages = Math.ceil(allJottings.length / size);
+const index = page;
+
+// Extract unique tags
+const tag_list = [...new Set(allJottings.flatMap(jotting => jotting.data.tags || []))];
+const tags: string[] = []; // Static: no tag filter for GitHub Pages
 ---
 
 <Base title={t("navigation.jotting")} {locale}>
