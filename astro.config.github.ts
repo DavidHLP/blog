@@ -1,0 +1,129 @@
+// @ts-check
+import { defineConfig, passthroughImageService } from "astro/config";
+import yaml from "@rollup/plugin-yaml";
+import sitemap from "@astrojs/sitemap";
+import svelte from "@astrojs/svelte";
+import UnoCSS from "unocss/astro";
+import swup from "@swup/astro";
+import icon from "astro-icon";
+import github_light from "shiki/themes/github-light.mjs";
+
+import GFM from "remark-gfm";
+import ins from "remark-ins";
+import mark from "remark-flexible-markers";
+import CJK from "remark-cjk-friendly";
+import CJK_strikethrough from "remark-cjk-friendly-gfm-strikethrough";
+import math from "remark-math";
+import gemoji from "remark-gemoji";
+import footnote from "remark-footnotes-extra";
+import { remarkExtendedTable as table, extendedTableHandlers as table_handler } from "remark-extended-table";
+import directive from "remark-directive";
+import ruby from "remark-ruby-directive";
+import alerts from "remark-github-blockquote-alert";
+import { rehypeHeadingIds as ids } from "@astrojs/markdown-remark";
+import anchor from "rehype-autolink-headings";
+import links from "rehype-external-links";
+import katex from "rehype-katex";
+// @ts-ignore
+import figure from "rehype-figure";
+import sectionize from "@hbsnow/rehype-sectionize";
+
+import spoiler from "./src/utils/remark/spoiler";
+import abbr from "./src/utils/remark/abbr";
+import wrapper from "./src/utils/remark/table-wrapper";
+import copy from "./src/utils/code-copy";
+
+// GitHub Pages configuration
+export default defineConfig({
+	// Remove Vercel adapter for GitHub Pages
+	output: "static", // Static site generation for GitHub Pages
+	site: process.env.GITHUB_PAGES_URL || "https://davidhlp.github.io",
+	base: process.env.GITHUB_PAGES_BASE || "/blog", // Repository name as base path
+	trailingSlash: "never",
+	i18n: {
+		locales: ["en", "zh-cn", "ja"],
+		defaultLocale: "en",
+		routing: {
+			redirectToDefaultLocale: false,
+			prefixDefaultLocale: false
+		}
+	},
+	image: {
+		service: passthroughImageService()
+	},
+	markdown: {
+		remarkPlugins: [[GFM, { singleTilde: false }], ins, mark, spoiler, CJK, [CJK_strikethrough, { singleTilde: false }], math, gemoji, footnote, table, directive, ruby, abbr, alerts],
+		rehypePlugins: [
+			ids,
+			[
+				anchor,
+				{
+					behavior: "wrap",
+					properties: {
+						ariaHidden: true,
+						tabIndex: -1,
+						class: "heading-link"
+					}
+				}
+			],
+			[
+				links,
+				{
+					target: "_blank",
+					rel: ["noopener", "noreferrer"]
+				}
+			],
+			katex,
+			figure,
+			sectionize,
+			wrapper
+		],
+		remarkRehype: {
+			handlers: {
+				...table_handler
+			}
+		},
+		shikiConfig: {
+			theme: github_light,
+			wrap: true,
+			transformers: [copy({ duration: 2000 })]
+		}
+	},
+	vite: {
+		plugins: [yaml()]
+	},
+	integrations: [
+		UnoCSS({
+			injectReset: true
+		}),
+		svelte(),
+		swup({
+			theme: false,
+			animationClass: "transition-",
+			containers: ["main"],
+			smoothScrolling: true,
+			cache: false,
+			preload: false,
+			accessibility: true,
+			globalInstance: false
+		}),
+		sitemap({
+			i18n: {
+				locales: {
+					en: "en",
+					"zh-cn": "zh-cn",
+					ja: "ja"
+				},
+				defaultLocale: "en"
+			}
+		}),
+		icon({
+			include: {
+				"fa6-brands": ["creative-commons", "creative-commons-by", "creative-commons-nc", "creative-commons-nd", "creative-commons-zero"],
+				lucide: ["align-justify", "arrow-left", "arrow-right", "arrow-up-to-line", "at-sign", "calendar", "circle-alert", "circle-check", "circle-question-mark", "circle-x", "clock-arrow-down", "clock-arrow-up", "copyright", "earth", "ellipsis", "feather", "file-search", "flag-triangle-right", "history", "house", "info", "library", "list", "log-out", "message-square", "moon", "pencil", "pilcrow", "refresh-cw", "reply", "rss", "scale", "send", "share-2", "signature", "siren", "smile", "sun", "tag", "tent", "timer", "trash", "triangle-alert", "user-round", "user-round-pen", "user-round-x", "x"],
+				"simple-icons": ["astro", "svelte", "github", "google", "x"],
+				"svg-spinners": ["3-dots-move", "pulse-3", "pulse-rings-3"]
+			}
+		})
+	]
+});
