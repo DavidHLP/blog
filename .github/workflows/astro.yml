@@ -1,12 +1,17 @@
-# Sample workflow for building and deploying an Astro site to GitHub Pages
+# Workflow for building and deploying an Astro site to GitHub Pages
 #
-# To get started with Astro see: https://docs.astro.build/en/getting-started/
+# This workflow builds the Astro site and deploys it to GitHub Pages
+# Optimized for this specific Astro project with i18n support
 #
-name: Deploy Astro site to Pages
+name: Deploy Astro Blog to Pages
 
 on:
   # Runs on pushes targeting the default branch
   push:
+    branches: ["main"]
+
+  # Runs on pull requests for testing builds
+  pull_request:
     branches: ["main"]
 
   # Allows you to run this workflow manually from the Actions tab
@@ -26,15 +31,19 @@ concurrency:
 
 env:
   BUILD_PATH: "." # default value when not using subfolders
-  # BUILD_PATH: subfolder
+  NODE_VERSION: "20" # Node.js version to use
+  ASTRO_TELEMETRY_DISABLED: 1 # Disable Astro telemetry
 
 jobs:
-  build:
-    name: Build
+  # Job for testing build on pull requests
+  test:
+    if: github.event_name == 'pull_request'
+    name: Test Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Detect package manager
         id: detect-package-manager
         run: |
@@ -43,35 +52,112 @@ jobs:
             echo "command=install" >> $GITHUB_OUTPUT
             echo "runner=yarn" >> $GITHUB_OUTPUT
             echo "lockfile=yarn.lock" >> $GITHUB_OUTPUT
-            exit 0
+          elif [ -f "${{ github.workspace }}/pnpm-lock.yaml" ]; then
+            echo "manager=pnpm" >> $GITHUB_OUTPUT
+            echo "command=install --frozen-lockfile" >> $GITHUB_OUTPUT
+            echo "runner=pnpm" >> $GITHUB_OUTPUT
+            echo "lockfile=pnpm-lock.yaml" >> $GITHUB_OUTPUT
           elif [ -f "${{ github.workspace }}/package.json" ]; then
             echo "manager=npm" >> $GITHUB_OUTPUT
             echo "command=ci" >> $GITHUB_OUTPUT
             echo "runner=npx --no-install" >> $GITHUB_OUTPUT
             echo "lockfile=package-lock.json" >> $GITHUB_OUTPUT
-            exit 0
           else
             echo "Unable to determine package manager"
             exit 1
           fi
-      - name: Setup Node
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: ${{ env.NODE_VERSION }}
+          cache: ${{ steps.detect-package-manager.outputs.manager }}
+          cache-dependency-path: ${{ env.BUILD_PATH }}/${{ steps.detect-package-manager.outputs.lockfile }}
+
+      - name: Install dependencies
+        run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
+        working-directory: ${{ env.BUILD_PATH }}
+
+      - name: Run Astro check
+        run: ${{ steps.detect-package-manager.outputs.runner }} astro check
+        working-directory: ${{ env.BUILD_PATH }}
+
+      - name: Test build
+        run: ${{ steps.detect-package-manager.outputs.runner }} astro build --config astro.config.github.ts
+        working-directory: ${{ env.BUILD_PATH }}
+
+  build:
+    if: github.event_name != 'pull_request'
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for proper git info
+
+      - name: Detect package manager
+        id: detect-package-manager
+        run: |
+          if [ -f "${{ github.workspace }}/yarn.lock" ]; then
+            echo "manager=yarn" >> $GITHUB_OUTPUT
+            echo "command=install" >> $GITHUB_OUTPUT
+            echo "runner=yarn" >> $GITHUB_OUTPUT
+            echo "lockfile=yarn.lock" >> $GITHUB_OUTPUT
+          elif [ -f "${{ github.workspace }}/pnpm-lock.yaml" ]; then
+            echo "manager=pnpm" >> $GITHUB_OUTPUT
+            echo "command=install --frozen-lockfile" >> $GITHUB_OUTPUT
+            echo "runner=pnpm" >> $GITHUB_OUTPUT
+            echo "lockfile=pnpm-lock.yaml" >> $GITHUB_OUTPUT
+          elif [ -f "${{ github.workspace }}/package.json" ]; then
+            echo "manager=npm" >> $GITHUB_OUTPUT
+            echo "command=ci" >> $GITHUB_OUTPUT
+            echo "runner=npx --no-install" >> $GITHUB_OUTPUT
+            echo "lockfile=package-lock.json" >> $GITHUB_OUTPUT
+          else
+            echo "Unable to determine package manager"
+            exit 1
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
           cache: ${{ steps.detect-package-manager.outputs.manager }}
           cache-dependency-path: ${{ env.BUILD_PATH }}/${{ steps.detect-package-manager.outputs.lockfile }}
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
+
       - name: Install dependencies
         run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
         working-directory: ${{ env.BUILD_PATH }}
-      - name: Build with Astro
+
+      - name: Run Astro check
+        run: ${{ steps.detect-package-manager.outputs.runner }} astro check
+        working-directory: ${{ env.BUILD_PATH }}
+        continue-on-error: false
+
+      - name: Build with Astro for GitHub Pages
         run: |
+          # Use GitHub Pages specific configuration
           ${{ steps.detect-package-manager.outputs.runner }} astro build \
+            --config astro.config.github.ts \
             --site "${{ steps.pages.outputs.origin }}" \
             --base "${{ steps.pages.outputs.base_path }}"
         working-directory: ${{ env.BUILD_PATH }}
+        env:
+          GITHUB_PAGES_URL: ${{ steps.pages.outputs.origin }}
+          GITHUB_PAGES_BASE: ${{ steps.pages.outputs.base_path }}
+
+      - name: Optimize build output
+        run: |
+          # Remove source maps in production to reduce size
+          find ${{ env.BUILD_PATH }}/dist -name "*.map" -type f -delete || true
+          # Show build size
+          du -sh ${{ env.BUILD_PATH }}/dist
+        working-directory: ${{ env.BUILD_PATH }}
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
