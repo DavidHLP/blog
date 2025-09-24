@@ -1,12 +1,13 @@
 // @ts-check
 import { defineConfig, passthroughImageService } from "astro/config";
+// import vercel from "@astrojs/vercel";
 import yaml from "@rollup/plugin-yaml";
 import sitemap from "@astrojs/sitemap";
 import svelte from "@astrojs/svelte";
 import UnoCSS from "unocss/astro";
 import swup from "@swup/astro";
 import icon from "astro-icon";
-import github_light from "shiki/themes/github-light.mjs";
+import github_light from "shiki/themes/github-light.mjs"
 
 import GFM from "remark-gfm";
 import ins from "remark-ins";
@@ -33,23 +34,22 @@ import abbr from "./src/utils/remark/abbr";
 import wrapper from "./src/utils/remark/table-wrapper";
 import copy from "./src/utils/code-copy";
 
-// GitHub Pages configuration
+// https://astro.build/config
 export default defineConfig({
-	// GitHub Pages static configuration
-	output: "static", // Static site generation for GitHub Pages
-	site: process.env.GITHUB_PAGES_URL || "https://davidhlp.github.io",
-	base: process.env.GITHUB_PAGES_BASE || "/blog", // Repository name as base path
+	// adapter: vercel(),  // Comment out for GitHub Pages
+	site: "https://davidhlp.github.io",
+	base: "/blog",
 	trailingSlash: "never",
 	i18n: {
 		locales: ["en", "zh-cn", "ja"],
 		defaultLocale: "en",
 		routing: {
 			redirectToDefaultLocale: false,
-			prefixDefaultLocale: false
+			prefixDefaultLocale: false,
 		}
 	},
 	image: {
-		service: passthroughImageService()
+		service: passthroughImageService(),
 	},
 	markdown: {
 		remarkPlugins: [
@@ -110,36 +110,88 @@ export default defineConfig({
 		plugins: [yaml()]
 	},
 	integrations: [
-		UnoCSS({
-			injectReset: true
-		}),
 		svelte(),
+		sitemap(),
 		swup({
-			theme: false,
-			animationClass: "transition-",
-			containers: ["main"],
-			smoothScrolling: true,
-			cache: false,
+			globalInstance: true,
 			preload: false,
-			accessibility: true,
-			globalInstance: false
+			smoothScrolling: false,
+			progress: true
 		}),
-		sitemap({
-			i18n: {
-				locales: {
-					en: "en",
-					"zh-cn": "zh-cn",
-					ja: "ja"
-				},
-				defaultLocale: "en"
-			}
+		UnoCSS({
+			injectReset: "@unocss/reset/normalize.css"
 		}),
 		icon({
 			include: {
-				"fa6-brands": ["creative-commons", "creative-commons-by", "creative-commons-nc", "creative-commons-nd", "creative-commons-zero"],
-				lucide: ["align-justify", "arrow-left", "arrow-right", "arrow-up-to-line", "at-sign", "calendar", "circle-alert", "circle-check", "circle-question-mark", "circle-x", "clock-arrow-down", "clock-arrow-up", "copyright", "earth", "ellipsis", "feather", "file-search", "flag-triangle-right", "history", "house", "info", "library", "list", "log-out", "message-square", "moon", "pencil", "pilcrow", "refresh-cw", "reply", "rss", "scale", "send", "share-2", "signature", "siren", "smile", "sun", "tag", "tent", "timer", "trash", "triangle-alert", "user-round", "user-round-pen", "user-round-x", "x"],
-				"simple-icons": ["astro", "svelte", "github", "google", "x"],
-				"svg-spinners": ["3-dots-move", "pulse-3", "pulse-rings-3"]
+				"fa6-brands": [
+					"creative-commons",
+					"creative-commons-by",
+					"creative-commons-sa",
+					"creative-commons-nc",
+					"creative-commons-nd",
+					"creative-commons-zero"
+				],
+				lucide: [
+					"align-justify",
+					"arrow-left",
+					"arrow-right",
+					"arrow-up-to-line",
+					"at-sign",
+					"calendar",
+					"circle-alert",
+					"circle-check",
+					"circle-question-mark",
+					"circle-x",
+					"clock-arrow-down",
+					"clock-arrow-up",
+					"copyright",
+					"earth",
+					"ellipsis",
+					"feather",
+					"file-search",
+					"flag-triangle-right",
+					"history",
+					"house",
+					"info",
+					"library",
+					"list",
+					"log-out",
+					"message-square",
+					"moon",
+					"pencil",
+					"pilcrow",
+					"refresh-cw",
+					"reply",
+					"rss",
+					"scale",
+					"send",
+					"share-2",
+					"signature",
+					"siren",
+					"smile",
+					"sun",
+					"tag",
+					"tent",
+					"timer",
+					"trash",
+					"triangle-alert",
+					"user-round",
+					"user-round-pen",
+					"user-round-x",
+					"x"
+				],
+				"simple-icons": [
+					"astro",
+					"svelte",
+					"github",
+					"google",
+					"x",
+				],
+				"svg-spinners": [
+					"3-dots-move",
+					"pulse-3",
+					"pulse-rings-3"
+				]
 			}
 		})
 	]
