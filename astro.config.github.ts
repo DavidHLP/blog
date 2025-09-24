@@ -52,41 +52,58 @@ export default defineConfig({
 		service: passthroughImageService()
 	},
 	markdown: {
-		remarkPlugins: [[GFM, { singleTilde: false }], ins, mark, spoiler, CJK, [CJK_strikethrough, { singleTilde: false }], math, gemoji, footnote, table, directive, ruby, abbr, alerts],
-		rehypePlugins: [
-			ids,
-			[
-				anchor,
-				{
-					behavior: "wrap",
-					properties: {
-						ariaHidden: true,
-						tabIndex: -1,
-						class: "heading-link"
-					}
-				}
-			],
-			[
-				links,
-				{
-					target: "_blank",
-					rel: ["noopener", "noreferrer"]
-				}
-			],
-			katex,
-			figure,
-			sectionize,
-			wrapper
+		remarkPlugins: [
+			[GFM, { singleTilde: false }],
+			ins,
+			mark,
+			spoiler,
+			CJK,
+			[CJK_strikethrough, { singleTilde: false }],
+			math,
+			gemoji,
+			footnote,
+			abbr,
+			wrapper,
+			[table, { colspanWithEmpty: true }],
+			wrapper,
+			directive,
+			ruby,
+			[alerts, { legacyTitle: true }]
 		],
 		remarkRehype: {
+			footnoteLabel: null,
+			footnoteLabelTagName: "p",
+			footnoteLabelProperties: {
+				className: ["hidden"]
+			},
 			handlers: {
 				...table_handler
 			}
 		},
+		rehypePlugins: [
+			ids,
+			[anchor, { behavior: "append", content: { type: "text", value: "󰌷" } }],
+			[links, { target: "_blank", rel: ["nofollow", "noopener", "noreferrer"] }],
+			katex,
+			figure,
+			sectionize
+		],
+		smartypants: false,
 		shikiConfig: {
-			theme: github_light,
-			wrap: true,
-			transformers: [copy({ duration: 2000 })]
+			themes: {
+				light: {
+					...github_light,
+					colorReplacements: {
+						"#fff": "var(--block-color)"
+					}
+				},
+				dark: "dark-plus"
+			},
+			transformers: [
+				copy({
+					duration: 1500
+				}),
+			]
 		}
 	},
 	vite: {
