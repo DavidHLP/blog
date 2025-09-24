@@ -9,10 +9,13 @@ import i18nit from "$i18n";
 export const prerender = true;
 
 export async function getStaticPaths() {
-	const locales = i18n!.locales;
-	return locales.map((locale) => ({
-		params: { locale }
-	}));
+	const jottings = await getCollection("jotting", jotting => !jotting.data.draft);
+
+	return jottings.map(jotting => {
+		const [language, ...id] = jotting.id.split("/");
+
+		return { params: { locale: language == i18n?.defaultLocale ? undefined : language, id: id.join("/") }, props: { jotting } };
+	});
 }
 
 const { locale = i18n!.defaultLocale } = Astro.params;
