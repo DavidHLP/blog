@@ -1,17 +1,6 @@
-2025-08-28:
-  - Sensitive Content Warning
-2025-01-08:
-  - Internationalization support
-2025-01-04:
-  - Atom subscription
-  - ~RSS subscription
-  - ~JSON Feed subscription
-2025-01-03:
-  - Heatmap
-  - Dynamic filtering
-2025-01-02:
-  - Notes
-  - Jottins
-  - Preface
-2025-01-01:
-  - Welcome to Astro
+2025-09-30:
+  - title: "CacheGuard TTL Feature Development Completed"
+    description: "Implemented core TTL management functionality for CacheGuard, including custom TTL configuration, TTL randomization for cache avalanche protection, and unified TTL calculation logic"
+    category: "Development"
+    tags: ["CacheGuard", "TTL", "Redis", "Cache", "Avalanche Protection"]
+    link: "CacheGuard-development-log-ttl"

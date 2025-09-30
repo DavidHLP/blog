@@ -1,17 +1,6 @@
-2025-08-28:
-  - 敏感内容警告
-2025-01-08:
-  - 多语言支持
-2025-01-04:
-  - Atom 订阅
-  - ~RSS 订阅
-  - ~JSON Feed 订阅
-2025-01-03:
-  - 热力图
-  - 动态筛选
-2025-01-02:
-  - 文记
-  - 随笔
-  - 序文
-2025-01-01:
-  - 欢迎使用 Astro
+2025-09-30:
+  - title: "CacheGuard TTL功能开发完成"
+    description: "实现了CacheGuard的核心TTL管理功能，包括自定义TTL配置、TTL随机化雪崩防护机制和统一的TTL计算逻辑"
+    category: "开发"
+    tags: ["CacheGuard", "TTL", "Redis", "缓存", "雪崩防护"]
+    link: "CacheGuard-development-log-ttl"
