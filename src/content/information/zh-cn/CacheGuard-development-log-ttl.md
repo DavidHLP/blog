@@ -1,6 +1,6 @@
-# CacheGuard TTL功能开发日志
+## CacheGuard TTL功能开发日志
 
-## 一、功能概述
+### 一、功能概述
 
 本次开发实现了CacheGuard的核心TTL（Time To Live）管理功能，包括：
 
@@ -8,9 +8,9 @@
 - TTL随机化（雪崩防护）
 - 统一的TTL计算逻辑
 
-## 二、核心实现
+### 二、核心实现
 
-### 2.1 TTL支持工具类 (TtlSupport)
+#### 2.1 TTL支持工具类 (TtlSupport)
 
 **文件位置**: `src/main/java/com/david/spring/cache/redis/core/writer/support/TtlSupport.java`
 
@@ -36,7 +36,7 @@ public long calculateFinalTtl(Long baseTtl, boolean randomTtl, float variance)
 - `getRemainingTtl()`: 获取剩余TTL
 - `fromDuration()` / `toDuration()`: Duration与秒数的转换
 
-### 2.2 缓存写入器 (RedisProCacheWriter)
+#### 2.2 缓存写入器 (RedisProCacheWriter)
 
 **文件位置**: `src/main/java/com/david/spring/cache/redis/core/writer/RedisProCacheWriter.java`
 
@@ -68,7 +68,7 @@ protected long getTtl(String redisKey)        // 获取缓存值中存储的TTL
 protected long getExpiration(String redisKey) // 获取Redis中的实际过期时间
 ```
 
-### 2.3 缓存值封装 (CachedValue)
+#### 2.3 缓存值封装 (CachedValue)
 
 **文件位置**: `src/main/java/com/david/spring/cache/redis/core/writer/CachedValue.java`
 
@@ -82,15 +82,15 @@ protected long getExpiration(String redisKey) // 获取Redis中的实际过期�
 - `isExpired()`: 判断是否过期
 - `getRemainingTtl()`: 获取剩余TTL
 
-### 2.4 工具类链式调用 (WriterChainableUtils)
+#### 2.4 工具类链式调用 (WriterChainableUtils)
 
 **文件位置**: `src/main/java/com/david/spring/cache/redis/core/writer/WriterChainableUtils.java`
 
 提供TtlSupport的访问接口，支持链式调用。
 
-## 三、测试实现
+### 三、测试实现
 
-### 3.1 集成测试 (BasicCacheTest)
+#### 3.1 集成测试 (BasicCacheTest)
 
 **文件位置**: `src/test/java/com/david/spring/cache/redis/service/BasicCacheTest.java`
 
@@ -107,7 +107,7 @@ protected long getExpiration(String redisKey) // 获取Redis中的实际过期�
    - 验证TTL在合理范围内（150-600秒）
    - 验证TTL确实发生了随机化
 
-### 3.2 单元测试 (RedisProCacheWriterTest)
+#### 3.2 单元测试 (RedisProCacheWriterTest)
 
 **文件位置**: `src/test/java/com/david/spring/cache/redis/core/writer/RedisProCacheWriterTest.java`
 
@@ -122,15 +122,15 @@ protected long getExpiration(String redisKey) // 获取Redis中的实际过期�
 - Mockito（用于依赖模拟）
 - AssertJ（用于断言）
 
-### 3.3 测试配置
+#### 3.3 测试配置
 
 **文件位置**: `src/test/java/com/david/spring/cache/redis/config/TestConfig.java`
 
 提供测试专用的`RedisProCacheWriterTestable` Bean，暴露了受保护的方法用于测试。
 
-## 四、技术亮点
+### 四、技术亮点
 
-### 4.1 雪崩防护机制
+#### 4.1 雪崩防护机制
 
 **问题**: 大量缓存同时过期导致数据库压力骤增
 
@@ -145,7 +145,7 @@ protected long getExpiration(String redisKey) // 获取Redis中的实际过期�
 ```
 生成的TTL范围: [150, 600]秒
 
-### 4.2 TTL优先级设计
+#### 4.2 TTL优先级设计
 
 采用明确的优先级策略:
 1. 注解中配置的TTL（上下文）
@@ -154,7 +154,7 @@ protected long getExpiration(String redisKey) // 获取Redis中的实际过期�
 
 这种设计确保了灵活性和一致性。
 
-### 4.3 完善的日志记录
+#### 4.3 完善的日志记录
 
 每个关键操作都有详细的DEBUG日志:
 - TTL计算过程
@@ -163,9 +163,9 @@ protected long getExpiration(String redisKey) // 获取Redis中的实际过期�
 
 便于问题排查和性能分析。
 
-## 五、代码质量
+### 五、代码质量
 
-### 5.1 异常处理
+#### 5.1 异常处理
 
 遵循编码规范:
 - 不使用异常做流程控制
@@ -173,21 +173,21 @@ protected long getExpiration(String redisKey) // 获取Redis中的实际过期�
 - 捕获具体的异常类型（JsonProcessingException）
 - 记录详细的错误日志
 
-### 5.2 日志规范
+#### 5.2 日志规范
 
 - 使用SLF4J + Lombok的@Slf4j
 - 使用占位符避免不必要的字符串拼接
 - 合理的日志级别（DEBUG/INFO/ERROR）
 
-### 5.3 代码可测试性
+#### 5.3 代码可测试性
 
 - 关键方法标记为protected，便于测试
 - 使用依赖注入，便于Mock
 - 提供测试专用的配置类
 
-## 六、使用示例
+### 六、使用示例
 
-### 6.1 基础用法
+#### 6.1 基础用法
 
 ```java
 @Service
@@ -199,7 +199,7 @@ public class UserService {
 }
 ```
 
-### 6.2 启用雪崩防护
+#### 6.2 启用雪崩防护
 
 ```java
 @RedisCacheable(
@@ -214,7 +214,7 @@ public User getUser(Long id) {
 }
 ```
 
-## 七、总结
+### 七、总结
 
 本次TTL功能开发完成了：
 - [x] 核心TTL管理功能

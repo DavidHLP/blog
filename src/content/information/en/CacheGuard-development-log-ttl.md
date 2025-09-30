@@ -1,6 +1,6 @@
-# CacheGuard TTL Feature Development Log
+## CacheGuard TTL Feature Development Log
 
-## I. Feature Overview
+### I. Feature Overview
 
 This development cycle implemented the core TTL (Time To Live) management functionality for CacheGuard, including:
 
@@ -8,9 +8,9 @@ This development cycle implemented the core TTL (Time To Live) management functi
 - TTL randomization (cache avalanche protection)
 - Unified TTL calculation logic
 
-## II. Core Implementation
+### II. Core Implementation
 
-### 2.1 TTL Support Utility Class (TtlSupport)
+#### 2.1 TTL Support Utility Class (TtlSupport)
 
 **File Location**: `src/main/java/com/david/spring/cache/redis/core/writer/support/TtlSupport.java`
 
@@ -36,7 +36,7 @@ public long calculateFinalTtl(Long baseTtl, boolean randomTtl, float variance)
 - `getRemainingTtl()`: Get remaining TTL
 - `fromDuration()` / `toDuration()`: Convert between Duration and seconds
 
-### 2.2 Cache Writer (RedisProCacheWriter)
+#### 2.2 Cache Writer (RedisProCacheWriter)
 
 **File Location**: `src/main/java/com/david/spring/cache/redis/core/writer/RedisProCacheWriter.java`
 
@@ -68,7 +68,7 @@ protected long getTtl(String redisKey)        // Get TTL stored in cache value
 protected long getExpiration(String redisKey) // Get actual expiration time in Redis
 ```
 
-### 2.3 Cache Value Wrapper (CachedValue)
+#### 2.3 Cache Value Wrapper (CachedValue)
 
 **File Location**: `src/main/java/com/david/spring/cache/redis/core/writer/CachedValue.java`
 
@@ -82,15 +82,15 @@ protected long getExpiration(String redisKey) // Get actual expiration time in R
 - `isExpired()`: Check if expired
 - `getRemainingTtl()`: Get remaining TTL
 
-### 2.4 Chainable Utility (WriterChainableUtils)
+#### 2.4 Chainable Utility (WriterChainableUtils)
 
 **File Location**: `src/main/java/com/david/spring/cache/redis/core/writer/WriterChainableUtils.java`
 
 Provides access interface for TtlSupport with method chaining support.
 
-## III. Test Implementation
+### III. Test Implementation
 
-### 3.1 Integration Tests (BasicCacheTest)
+#### 3.1 Integration Tests (BasicCacheTest)
 
 **File Location**: `src/test/java/com/david/spring/cache/redis/service/BasicCacheTest.java`
 
@@ -107,7 +107,7 @@ Provides access interface for TtlSupport with method chaining support.
    - Verify TTL within reasonable range (150-600 seconds)
    - Verify TTL randomization actually occurs
 
-### 3.2 Unit Tests (RedisProCacheWriterTest)
+#### 3.2 Unit Tests (RedisProCacheWriterTest)
 
 **File Location**: `src/test/java/com/david/spring/cache/redis/core/writer/RedisProCacheWriterTest.java`
 
@@ -122,15 +122,15 @@ Provides access interface for TtlSupport with method chaining support.
 - Mockito (for dependency mocking)
 - AssertJ (for assertions)
 
-### 3.3 Test Configuration
+#### 3.3 Test Configuration
 
 **File Location**: `src/test/java/com/david/spring/cache/redis/config/TestConfig.java`
 
 Provides test-specific `RedisProCacheWriterTestable` Bean that exposes protected methods for testing.
 
-## IV. Technical Highlights
+### IV. Technical Highlights
 
-### 4.1 Cache Avalanche Protection Mechanism
+#### 4.1 Cache Avalanche Protection Mechanism
 
 **Problem**: Massive cache expiration causing sudden database pressure spikes
 
@@ -145,7 +145,7 @@ Provides test-specific `RedisProCacheWriterTestable` Bean that exposes protected
 ```
 Generated TTL range: [150, 600] seconds
 
-### 4.2 TTL Priority Design
+#### 4.2 TTL Priority Design
 
 Adopts clear priority strategy:
 1. TTL configured in annotation (context)
@@ -154,7 +154,7 @@ Adopts clear priority strategy:
 
 This design ensures both flexibility and consistency.
 
-### 4.3 Comprehensive Logging
+#### 4.3 Comprehensive Logging
 
 Every critical operation has detailed DEBUG logs:
 - TTL calculation process
@@ -163,9 +163,9 @@ Every critical operation has detailed DEBUG logs:
 
 Facilitates troubleshooting and performance analysis.
 
-## V. Code Quality
+### V. Code Quality
 
-### 5.1 Exception Handling
+#### 5.1 Exception Handling
 
 Follows coding standards:
 - No exceptions for flow control
@@ -173,21 +173,21 @@ Follows coding standards:
 - Catch specific exception types (JsonProcessingException)
 - Record detailed error logs
 
-### 5.2 Logging Standards
+#### 5.2 Logging Standards
 
 - Use SLF4J + Lombok's @Slf4j
 - Use placeholders to avoid unnecessary string concatenation
 - Appropriate log levels (DEBUG/INFO/ERROR)
 
-### 5.3 Code Testability
+#### 5.3 Code Testability
 
 - Key methods marked as protected for testing convenience
 - Use dependency injection for easy mocking
 - Provide test-specific configuration classes
 
-## VI. Usage Examples
+### VI. Usage Examples
 
-### 6.1 Basic Usage
+#### 6.1 Basic Usage
 
 ```java
 @Service
@@ -199,7 +199,7 @@ public class UserService {
 }
 ```
 
-### 6.2 Enable Avalanche Protection
+#### 6.2 Enable Avalanche Protection
 
 ```java
 @RedisCacheable(
@@ -214,7 +214,7 @@ public User getUser(Long id) {
 }
 ```
 
-## VII. Summary
+### VII. Summary
 
 This TTL feature development completed:
 - [x] Core TTL management functionality
