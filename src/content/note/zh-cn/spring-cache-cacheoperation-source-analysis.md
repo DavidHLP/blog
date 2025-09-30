@@ -766,6 +766,248 @@ else {
 return Collections.unmodifiableList(ops);  // 返回不可变视图，防止意外修改
 ```
 
+## 实际案例研究：RedisCacheOperationSource
+
+为了更好地理解如何实现自定义的`CacheOperationSource`，让我们分析一个实际案例：来自CacheGuard项目的`RedisCacheOperationSource`。这个实现展示了如何扩展Spring Cache以支持Redis特定的缓存功能。
+
+### 案例研究概述
+
+`RedisCacheOperationSource`扩展了`AnnotationCacheOperationSource`，支持自定义的Redis缓存注解，如`@RedisCacheable`、`@RedisCacheEvict`和`@RedisCaching`。这个实现展现了几个关键的设计原则：
+
+1. **扩展而非替换**：扩展现有的Spring Cache基础设施
+2. **自定义注解支持**：处理Redis特定的缓存注解
+3. **全面验证**：提供健壮的错误检查和日志记录
+4. **复合注解处理**：支持复杂的注解组合
+
+### 实现分析
+
+#### 1. 核心结构
+
+```java
+@Slf4j
+public class RedisCacheOperationSource extends AnnotationCacheOperationSource {
+
+    public RedisCacheOperationSource() {
+        super(false);  // 允许非公共方法
+    }
+
+    @Override
+    protected Collection<CacheOperation> findCacheOperations(Method method) {
+        return parseCacheAnnotations(method);
+    }
+
+    @Override
+    protected Collection<CacheOperation> findCacheOperations(Class<?> clazz) {
+        return parseCacheAnnotations(clazz);
+    }
+}
+```
+
+**设计决策：**
+
+- **构造函数参数**：`super(false)`允许处理非公共方法，提供比Spring默认行为更大的灵活性
+- **模板方法实现**：重写父类的抽象方法，委托给自定义的解析逻辑
+- **统一解析**：使用单个`parseCacheAnnotations(Object target)`方法处理类和方法目标
+
+#### 2. 自定义注解解析策略
+
+```java
+@Nullable
+private Collection<CacheOperation> parseCacheAnnotations(Object target) {
+    List<CacheOperation> ops = new ArrayList<>();
+    log.trace("Parsing cache annotations for target: {}", target);
+
+    // 处理 @RedisCacheable 注解
+    RedisCacheable cacheable = null;
+    if (target instanceof Method) {
+        cacheable = AnnotatedElementUtils.findMergedAnnotation(
+                (Method) target, RedisCacheable.class);
+    } else if (target instanceof Class) {
+        cacheable = AnnotatedElementUtils.findMergedAnnotation(
+                (Class<?>) target, RedisCacheable.class);
+    }
+
+    if (cacheable != null) {
+        log.debug("Found @RedisCacheable annotation on target: {}", target);
+        CacheOperation operation = parseRedisCacheable(cacheable, target);
+        validateCacheOperation(target, operation);
+        ops.add(operation);
+    }
+
+    // 处理 @RedisCaching 复合注解
+    RedisCaching caching = null;
+    if (target instanceof Method) {
+        caching = AnnotatedElementUtils.findMergedAnnotation((Method) target, RedisCaching.class);
+    } else if (target instanceof Class) {
+        caching = AnnotatedElementUtils.findMergedAnnotation((Class<?>) target, RedisCaching.class);
+    }
+
+    if (caching != null) {
+        log.debug("Found @RedisCaching annotation on target: {}", target);
+        // 处理多个嵌套注解
+        for (RedisCacheable c : caching.redisCacheable()) {
+            CacheOperation operation = parseRedisCacheable(c, target);
+            validateCacheOperation(target, operation);
+            ops.add(operation);
+        }
+        for (RedisCacheEvict e : caching.redisCacheEvict()) {
+            RedisCacheEvictOperation operation = parseRedisCacheEvict(e, target);
+            validateCacheOperation(target, operation);
+            ops.add(operation);
+        }
+    }
+
+    return ops.isEmpty() ? null : Collections.unmodifiableList(ops);
+}
+```
+
+**应用的关键设计模式：**
+
+1. **多态目标处理**：使用`Object target`参数统一处理`Method`和`Class`类型
+2. **合并注解支持**：使用`AnnotatedElementUtils.findMergedAnnotation()`支持注解继承和元注解
+3. **组合模式**：通过相同接口处理单个注解和复合注解
+4. **防御性编程**：每一步都进行全面的日志记录和验证
+
+#### 3. 注解到操作的转换
+
+```java
+private CacheOperation parseRedisCacheable(RedisCacheable ann, Object target) {
+    String name = (target instanceof Method) ? ((Method) target).getName() : target.toString();
+    log.trace("Parsing @RedisCacheable annotation for target: {}", target);
+
+    // 使用标准的Spring CacheableOperation.Builder
+    CacheableOperation.Builder builder = new CacheableOperation.Builder();
+    builder.setName(name);
+    builder.setCacheNames(ann.value().length > 0 ? ann.value() : ann.cacheNames());
+
+    // 仅在存在时设置key
+    if (StringUtils.hasText(ann.key())) {
+        builder.setKey(ann.key());
+    }
+
+    // 仅在存在时设置condition
+    if (StringUtils.hasText(ann.condition())) {
+        builder.setCondition(ann.condition());
+    }
+
+    builder.setSync(ann.sync());
+
+    // 仅在指定时设置keyGenerator
+    if (StringUtils.hasText(ann.keyGenerator())) {
+        builder.setKeyGenerator(ann.keyGenerator());
+    }
+
+    CacheableOperation operation = builder.build();
+    log.debug("Built CacheableOperation: {}", operation);
+    return operation;
+}
+```
+
+**建造者模式的卓越应用：**
+
+- **流畅接口**：使用Spring内置的`CacheableOperation.Builder`实现清晰、可读的代码
+- **条件设置**：仅在有意义的值时设置属性，避免空字符串污染
+- **标准兼容**：重用Spring的标准操作类以实现最大兼容性
+
+#### 4. 全面的验证框架
+
+```java
+private void validateCacheOperation(Object target, CacheOperation operation) {
+    log.trace("Validating cache operation for target: {}", target);
+
+    // 验证key与keyGenerator的互斥性
+    if (StringUtils.hasText(operation.getKey()) &&
+        StringUtils.hasText(operation.getKeyGenerator())) {
+        String errorMsg = "Invalid cache annotation configuration on '" + target +
+                         "'. Both 'key' and 'keyGenerator' attributes have been set. " +
+                         "These attributes are mutually exclusive...";
+        log.error(errorMsg);
+        throw new IllegalStateException(errorMsg);
+    }
+
+    // 验证缓存名称的存在性
+    if (operation.getCacheNames().isEmpty()) {
+        String errorMsg = "Invalid cache annotation configuration on '" + target +
+                         "'. At least one cache name must be specified.";
+        log.error(errorMsg);
+        throw new IllegalStateException(errorMsg);
+    }
+
+    log.debug("Cache operation validation passed for target: {}", target);
+}
+```
+
+**验证策略的优势：**
+
+1. **早期错误检测**：在启动时而非运行时捕获配置错误
+2. **清晰的错误消息**：提供详细的、可操作的错误消息
+3. **快速失败原则**：对无效配置抛出`IllegalStateException`
+4. **全面覆盖**：验证所有关键配置组合
+
+### 案例研究中的设计模式应用
+
+#### 1. 模板方法模式的使用
+
+```java
+public class RedisCacheOperationSource extends AnnotationCacheOperationSource {
+    // 从父类继承缓存和回退逻辑
+
+    @Override
+    protected Collection<CacheOperation> findCacheOperations(Method method) {
+        return parseCacheAnnotations(method);  // 自定义实现
+    }
+
+    @Override
+    protected Collection<CacheOperation> findCacheOperations(Class<?> clazz) {
+        return parseCacheAnnotations(clazz);   // 自定义实现
+    }
+}
+```
+
+**实现的优势：**
+
+- **代码复用**：继承父类的缓存、回退和性能优化
+- **专注核心逻辑**：只需实现注解解析逻辑
+- **一致性**：遵循与标准Spring实现相同的执行模式
+
+#### 2. 多注解的策略模式
+
+```java
+private Collection<CacheOperation> parseCacheAnnotations(Object target) {
+    List<CacheOperation> ops = new ArrayList<>();
+
+    // 策略1：处理@RedisCacheable
+    RedisCacheable cacheable = findAnnotation(target, RedisCacheable.class);
+    if (cacheable != null) {
+        ops.add(parseRedisCacheable(cacheable, target));
+    }
+
+    // 策略2：处理@RedisCacheEvict
+    RedisCacheEvict cacheEvict = findAnnotation(target, RedisCacheEvict.class);
+    if (cacheEvict != null) {
+        ops.add(parseRedisCacheEvict(cacheEvict, target));
+    }
+
+    // 策略3：处理@RedisCaching复合注解
+    RedisCaching caching = findAnnotation(target, RedisCaching.class);
+    if (caching != null) {
+        // 处理多个嵌套注解
+    }
+
+    return ops.isEmpty() ? null : Collections.unmodifiableList(ops);
+}
+```
+
+### 案例研究的关键要点
+
+1. **扩展策略**：扩展`AnnotationCacheOperationSource`最大化利用Spring现有基础设施
+2. **验证重要性**：全面验证防止运行时错误并提供清晰反馈
+3. **日志策略**：多级日志支持开发和生产调试
+4. **模式应用**：实际实现展示了模板方法、策略和建造者模式的有效使用
+5. **性能意识**：高效的注解处理和内存管理对高性能应用至关重要
+
+这个案例研究展示了Spring Cache架构的理论概念如何转化为实际的、可用于生产的实现，扩展和增强了框架的能力。
+
 ## 扩展和自定义指南
 
 ### 1. 自定义CacheAnnotationParser

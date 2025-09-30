@@ -2,7 +2,6 @@
 '500': Internal Server Error
 about:
   introduction: Introduction
-  roll: Link Roll
 back: Go Home
 feed:
   address: Subscription address

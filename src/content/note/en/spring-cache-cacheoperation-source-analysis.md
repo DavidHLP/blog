@@ -764,6 +764,248 @@ else {
 return Collections.unmodifiableList(ops);  // Return immutable view, prevent accidental modification
 ```
 
+## Real-World Implementation Case: RedisCacheOperationSource
+
+To better understand how to implement a custom `CacheOperationSource`, let's examine a real-world example: `RedisCacheOperationSource` from the CacheGuard project. This implementation demonstrates how to extend Spring Cache to support Redis-specific caching features.
+
+### Case Study Overview
+
+`RedisCacheOperationSource` extends `AnnotationCacheOperationSource` to support custom Redis cache annotations like `@RedisCacheable`, `@RedisCacheEvict`, and `@RedisCaching`. This implementation showcases several key design principles:
+
+1. **Extension over Replacement**: Extends existing Spring Cache infrastructure
+2. **Custom Annotation Support**: Handles Redis-specific cache annotations
+3. **Comprehensive Validation**: Provides robust error checking and logging
+4. **Composite Annotation Handling**: Supports complex annotation combinations
+
+### Implementation Analysis
+
+#### 1. Core Structure
+
+```java
+@Slf4j
+public class RedisCacheOperationSource extends AnnotationCacheOperationSource {
+
+    public RedisCacheOperationSource() {
+        super(false);  // Allow non-public methods
+    }
+
+    @Override
+    protected Collection<CacheOperation> findCacheOperations(Method method) {
+        return parseCacheAnnotations(method);
+    }
+
+    @Override
+    protected Collection<CacheOperation> findCacheOperations(Class<?> clazz) {
+        return parseCacheAnnotations(clazz);
+    }
+}
+```
+
+**Design Decisions:**
+
+- **Constructor Parameter**: `super(false)` allows processing of non-public methods, providing more flexibility than Spring's default behavior
+- **Template Method Implementation**: Overrides abstract methods from parent class to delegate to custom parsing logic
+- **Unified Parsing**: Uses a single `parseCacheAnnotations(Object target)` method to handle both class and method targets
+
+#### 2. Custom Annotation Parsing Strategy
+
+```java
+@Nullable
+private Collection<CacheOperation> parseCacheAnnotations(Object target) {
+    List<CacheOperation> ops = new ArrayList<>();
+    log.trace("Parsing cache annotations for target: {}", target);
+
+    // Handle @RedisCacheable annotation
+    RedisCacheable cacheable = null;
+    if (target instanceof Method) {
+        cacheable = AnnotatedElementUtils.findMergedAnnotation(
+                (Method) target, RedisCacheable.class);
+    } else if (target instanceof Class) {
+        cacheable = AnnotatedElementUtils.findMergedAnnotation(
+                (Class<?>) target, RedisCacheable.class);
+    }
+
+    if (cacheable != null) {
+        log.debug("Found @RedisCacheable annotation on target: {}", target);
+        CacheOperation operation = parseRedisCacheable(cacheable, target);
+        validateCacheOperation(target, operation);
+        ops.add(operation);
+    }
+
+    // Handle @RedisCaching composite annotation
+    RedisCaching caching = null;
+    if (target instanceof Method) {
+        caching = AnnotatedElementUtils.findMergedAnnotation((Method) target, RedisCaching.class);
+    } else if (target instanceof Class) {
+        caching = AnnotatedElementUtils.findMergedAnnotation((Class<?>) target, RedisCaching.class);
+    }
+
+    if (caching != null) {
+        log.debug("Found @RedisCaching annotation on target: {}", target);
+        // Process multiple nested annotations
+        for (RedisCacheable c : caching.redisCacheable()) {
+            CacheOperation operation = parseRedisCacheable(c, target);
+            validateCacheOperation(target, operation);
+            ops.add(operation);
+        }
+        for (RedisCacheEvict e : caching.redisCacheEvict()) {
+            RedisCacheEvictOperation operation = parseRedisCacheEvict(e, target);
+            validateCacheOperation(target, operation);
+            ops.add(operation);
+        }
+    }
+
+    return ops.isEmpty() ? null : Collections.unmodifiableList(ops);
+}
+```
+
+**Key Design Patterns Applied:**
+
+1. **Polymorphic Target Handling**: Uses `Object target` parameter to handle both `Method` and `Class` types uniformly
+2. **Merged Annotation Support**: Uses `AnnotatedElementUtils.findMergedAnnotation()` to support annotation inheritance and meta-annotations
+3. **Composite Pattern**: Handles both single annotations and composite annotations through the same interface
+4. **Defensive Programming**: Comprehensive logging and validation at each step
+
+#### 3. Annotation-to-Operation Conversion
+
+```java
+private CacheOperation parseRedisCacheable(RedisCacheable ann, Object target) {
+    String name = (target instanceof Method) ? ((Method) target).getName() : target.toString();
+    log.trace("Parsing @RedisCacheable annotation for target: {}", target);
+
+    // Use standard Spring CacheableOperation.Builder
+    CacheableOperation.Builder builder = new CacheableOperation.Builder();
+    builder.setName(name);
+    builder.setCacheNames(ann.value().length > 0 ? ann.value() : ann.cacheNames());
+
+    // Set key only when present
+    if (StringUtils.hasText(ann.key())) {
+        builder.setKey(ann.key());
+    }
+
+    // Set condition only when present
+    if (StringUtils.hasText(ann.condition())) {
+        builder.setCondition(ann.condition());
+    }
+
+    builder.setSync(ann.sync());
+
+    // Set keyGenerator only when specified
+    if (StringUtils.hasText(ann.keyGenerator())) {
+        builder.setKeyGenerator(ann.keyGenerator());
+    }
+
+    CacheableOperation operation = builder.build();
+    log.debug("Built CacheableOperation: {}", operation);
+    return operation;
+}
+```
+
+**Builder Pattern Excellence:**
+
+- **Fluent Interface**: Uses Spring's built-in `CacheableOperation.Builder` for clean, readable code
+- **Conditional Setting**: Only sets properties when they have meaningful values, avoiding empty string pollution
+- **Standard Compliance**: Reuses Spring's standard operation classes for maximum compatibility
+
+#### 4. Comprehensive Validation Framework
+
+```java
+private void validateCacheOperation(Object target, CacheOperation operation) {
+    log.trace("Validating cache operation for target: {}", target);
+
+    // Validate key vs keyGenerator mutual exclusivity
+    if (StringUtils.hasText(operation.getKey()) &&
+        StringUtils.hasText(operation.getKeyGenerator())) {
+        String errorMsg = "Invalid cache annotation configuration on '" + target +
+                         "'. Both 'key' and 'keyGenerator' attributes have been set. " +
+                         "These attributes are mutually exclusive...";
+        log.error(errorMsg);
+        throw new IllegalStateException(errorMsg);
+    }
+
+    // Validate cache names presence
+    if (operation.getCacheNames().isEmpty()) {
+        String errorMsg = "Invalid cache annotation configuration on '" + target +
+                         "'. At least one cache name must be specified.";
+        log.error(errorMsg);
+        throw new IllegalStateException(errorMsg);
+    }
+
+    log.debug("Cache operation validation passed for target: {}", target);
+}
+```
+
+**Validation Strategy Benefits:**
+
+1. **Early Error Detection**: Catches configuration errors at startup rather than runtime
+2. **Clear Error Messages**: Provides detailed, actionable error messages
+3. **Fail-Fast Principle**: Throws `IllegalStateException` for invalid configurations
+4. **Comprehensive Coverage**: Validates all critical configuration combinations
+
+### Design Pattern Applications in the Case Study
+
+#### 1. Template Method Pattern Usage
+
+```java
+public class RedisCacheOperationSource extends AnnotationCacheOperationSource {
+    // Inherits caching and fallback logic from parent
+
+    @Override
+    protected Collection<CacheOperation> findCacheOperations(Method method) {
+        return parseCacheAnnotations(method);  // Custom implementation
+    }
+
+    @Override
+    protected Collection<CacheOperation> findCacheOperations(Class<?> clazz) {
+        return parseCacheAnnotations(clazz);   // Custom implementation
+    }
+}
+```
+
+**Benefits Realized:**
+
+- **Code Reuse**: Inherits caching, fallback, and performance optimizations from parent
+- **Focus on Core Logic**: Only needs to implement annotation parsing logic
+- **Consistency**: Follows the same execution pattern as standard Spring implementations
+
+#### 2. Strategy Pattern for Multiple Annotations
+
+```java
+private Collection<CacheOperation> parseCacheAnnotations(Object target) {
+    List<CacheOperation> ops = new ArrayList<>();
+
+    // Strategy 1: Handle @RedisCacheable
+    RedisCacheable cacheable = findAnnotation(target, RedisCacheable.class);
+    if (cacheable != null) {
+        ops.add(parseRedisCacheable(cacheable, target));
+    }
+
+    // Strategy 2: Handle @RedisCacheEvict
+    RedisCacheEvict cacheEvict = findAnnotation(target, RedisCacheEvict.class);
+    if (cacheEvict != null) {
+        ops.add(parseRedisCacheEvict(cacheEvict, target));
+    }
+
+    // Strategy 3: Handle @RedisCaching composite
+    RedisCaching caching = findAnnotation(target, RedisCaching.class);
+    if (caching != null) {
+        // Process multiple nested annotations
+    }
+
+    return ops.isEmpty() ? null : Collections.unmodifiableList(ops);
+}
+```
+
+### Key Takeaways from the Case Study
+
+1. **Extension Strategy**: Extending `AnnotationCacheOperationSource` provides maximum leverage of Spring's existing infrastructure
+2. **Validation Importance**: Comprehensive validation prevents runtime errors and provides clear feedback
+3. **Logging Strategy**: Multi-level logging supports both development and production debugging
+4. **Pattern Application**: Real-world implementation demonstrates effective use of Template Method, Strategy, and Builder patterns
+5. **Performance Awareness**: Efficient annotation processing and memory management are crucial for high-performance applications
+
+This case study demonstrates how the theoretical concepts of Spring Cache's architecture translate into practical, production-ready implementations that extend and enhance the framework's capabilities.
+
 ## Extension and Customization Guide
 
 ### 1. Custom CacheAnnotationParser
