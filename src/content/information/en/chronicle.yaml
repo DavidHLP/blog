@@ -1,6 +1,2 @@
 2025-09-30:
-  - title: "CacheGuard TTL Feature Development Completed"
-    description: "Implemented core TTL management functionality for CacheGuard, including custom TTL configuration, TTL randomization for cache avalanche protection, and unified TTL calculation logic"
-    category: "Development"
-    tags: ["CacheGuard", "TTL", "Redis", "Cache", "Avalanche Protection"]
-    link: "CacheGuard-development-log-ttl"
+  - CacheGuard TTL Feature Development Completed
