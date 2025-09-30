@@ -17,69 +17,72 @@ Cache注解处理的核心基础设施，理解它们的设计和协作关系对
 
 ### 整体架构
 
-```
-CacheInterceptor (AOP拦截器)
-        ↓
-CacheOperationSource (接口：定义缓存操作获取契约)
-        ↓
-AbstractFallbackCacheOperationSource (抽象类：提供缓存和回退策略)
-        ↓
-AnnotationCacheOperationSource (实现类：基于注解的缓存操作解析)
-        ↓
-CacheAnnotationParser (策略接口：具体注解解析策略)
-        ↓
-SpringCacheAnnotationParser (实现类：Spring标准注解解析器)
+```mermaid
+flowchart TD
+    A[CacheInterceptor<br/>AOP拦截器] --> B[CacheOperationSource<br/>接口：定义缓存操作获取契约]
+    B --> C[AbstractFallbackCacheOperationSource<br/>抽象类：提供缓存和回退策略]
+    C --> D[AnnotationCacheOperationSource<br/>实现类：基于注解的缓存操作解析]
+    D --> E[CacheAnnotationParser<br/>策略接口：具体注解解析策略]
+    E --> F[SpringCacheAnnotationParser<br/>实现类：Spring标准注解解析器]
+
+    style A fill:#e1f5fe
+    style B fill:#fff3e0
+    style C fill:#f3e5f5
+    style D fill:#e8f5e8
+    style E fill:#fff8e1
+    style F fill:#fce4ec
 ```
 
 ### 组件关系图
 
-```
-┌─────────────────────────────────────────────────────┐
-│                CacheInterceptor                     │
-│                 (AOP 拦截器)                         │
-└─────────────────────┬───────────────────────────────┘
-                    │ 调用 getCacheOperations()
-                    ↓
-┌─────────────────────────────────────────────────────┐
-│              CacheOperationSource                   │
-│                   (顶层接口)                         │
-│  + getCacheOperations(Method, Class): Collection    │
-│  + isCandidateClass(Class): boolean                 │
-└─────────────────────┬───────────────────────────────┘
-                    │ 继承
-                    ↓
-┌─────────────────────────────────────────────────────┐
-│        AbstractFallbackCacheOperationSource         │
-│                  (抽象骨架实现)                       │
-│  - operationCache: Map<Object, Collection>          │
-│  # findCacheOperations(Method): Collection          │
-│  # findCacheOperations(Class): Collection           │
-│  + getCacheOperations(): 模板方法实现                │
-└─────────────────────┬───────────────────────────────┘
-                    │ 继承
-                    ↓
-┌─────────────────────────────────────────────────────┐
-│           AnnotationCacheOperationSource            │
-│              (标准注解解析实现)                       │
-│  - annotationParsers: Set<CacheAnnotationParser>   │
-│  + findCacheOperations(): 委托给解析器集合           │
-└─────────────────────┬───────────────────────────────┘
-                    │ 组合关系
-                    ↓
-┌─────────────────────────────────────────────────────┐
-│             CacheAnnotationParser                   │
-│                 (策略接口)                           │
-│  + parseCacheAnnotations(Method): Collection        │
-│  + parseCacheAnnotations(Class): Collection         │
-│  + isCandidateClass(Class): boolean                 │
-└─────────────────────┬───────────────────────────────┘
-                    │ 实现
-                    ↓
-┌─────────────────────────────────────────────────────┐
-│          SpringCacheAnnotationParser                │
-│            (Spring标准注解解析器)                    │
-│  解析 @Cacheable, @CacheEvict, @CachePut           │
-└─────────────────────────────────────────────────────┘
+```mermaid
+classDiagram
+    class CacheInterceptor {
+        +invoke() Object
+        -cacheOperationSource CacheOperationSource
+    }
+
+    class CacheOperationSource {
+        <<interface>>
+        +getCacheOperations(Method, Class) Collection~CacheOperation~
+        +isCandidateClass(Class) boolean
+    }
+
+    class AbstractFallbackCacheOperationSource {
+        <<abstract>>
+        -operationCache Map~Object,Collection~
+        +getCacheOperations(Method, Class) Collection~CacheOperation~
+        #findCacheOperations(Method) Collection~CacheOperation~*
+        #findCacheOperations(Class) Collection~CacheOperation~*
+        -computeCacheOperations(Method, Class) Collection~CacheOperation~
+    }
+
+    class AnnotationCacheOperationSource {
+        -publicMethodsOnly boolean
+        -annotationParsers Set~CacheAnnotationParser~
+        +findCacheOperations(Method) Collection~CacheOperation~
+        +findCacheOperations(Class) Collection~CacheOperation~
+        +isCandidateClass(Class) boolean
+    }
+
+    class CacheAnnotationParser {
+        <<interface>>
+        +parseCacheAnnotations(Method) Collection~CacheOperation~
+        +parseCacheAnnotations(Class) Collection~CacheOperation~
+        +isCandidateClass(Class) boolean
+    }
+
+    class SpringCacheAnnotationParser {
+        +parseCacheAnnotations(Method) Collection~CacheOperation~
+        +parseCacheAnnotations(Class) Collection~CacheOperation~
+        +isCandidateClass(Class) boolean
+    }
+
+    CacheInterceptor --> CacheOperationSource : 调用 getCacheOperations()
+    CacheOperationSource <|-- AbstractFallbackCacheOperationSource : 继承
+    AbstractFallbackCacheOperationSource <|-- AnnotationCacheOperationSource : 继承
+    AnnotationCacheOperationSource o--> CacheAnnotationParser : 组合关系
+    CacheAnnotationParser <|.. SpringCacheAnnotationParser : 实现
 ```
 
 ## 详细组件分析
@@ -270,6 +273,41 @@ private Collection<CacheOperation> computeCacheOperations(Method method, @Nullab
 2. **就近原则**：越接近实际调用点的注解优先级越高
 3. **覆盖机制**：方法级注解完全覆盖类级注解，而不是合并
 4. **代理兼容**：正确处理JDK动态代理和CGLIB代理的情况
+
+**四级回退查找策略流程图：**
+
+```mermaid
+flowchart TD
+    A[开始查找缓存操作] --> B[公共方法检查]
+    B --> C{是否只允许公共方法?}
+    C -->|是,且方法非公共| D[返回 null]
+    C -->|否,或方法为公共| E[获取最具体方法<br/>getMostSpecificMethod]
+
+    E --> F[第一级: 查找目标方法注解<br/>findCacheOperations - specificMethod]
+    F --> G{找到注解?}
+    G -->|是| H[返回操作集合]
+
+    G -->|否| I[第二级: 查找目标类注解<br/>findCacheOperations - specificMethod.getDeclaringClass]
+    I --> J{找到注解且为用户级方法?}
+    J -->|是| H
+
+    J -->|否| K{specificMethod != method?}
+    K -->|否| L[返回 null - 查找结束]
+
+    K -->|是| M[第三级: 查找原始方法注解<br/>findCacheOperations - method]
+    M --> N{找到注解?}
+    N -->|是| H
+
+    N -->|否| O[第四级: 查找原始方法声明类注解<br/>findCacheOperations - method.getDeclaringClass]
+    O --> P{找到注解且为用户级方法?}
+    P -->|是| H
+    P -->|否| L
+
+    style A fill:#e3f2fd
+    style H fill:#c8e6c9
+    style L fill:#ffcdd2
+    style D fill:#ffcdd2
+```
 
 **模板方法的体现：**
 
@@ -507,46 +545,57 @@ public class SpringCacheAnnotationParser implements CacheAnnotationParser {
 
 ### 方法调用时序图
 
-```
-用户调用 -> AOP代理 -> CacheInterceptor -> CacheOperationSource
-    │
-    └─→ AbstractFallbackCacheOperationSource.getCacheOperations()
-        │
-        ├─→ [缓存检查] operationCache.get(cacheKey)
-        │   ├─→ [命中] 返回缓存结果
-        │   └─→ [未命中] 继续执行
-        │
-        └─→ computeCacheOperations()
-            │
-            ├─→ [方法检查] 公共方法验证
-            ├─→ [具体方法] AopUtils.getMostSpecificMethod()
-            │
-            └─→ [四级回退查找]
-                ├─→ 1. findCacheOperations(specificMethod)
-                ├─→ 2. findCacheOperations(specificMethod.getDeclaringClass())
-                ├─→ 3. findCacheOperations(method)
-                └─→ 4. findCacheOperations(method.getDeclaringClass())
-                    │
-                    └─→ AnnotationCacheOperationSource.findCacheOperations()
-                        │
-                        └─→ determineCacheOperations()
-                            │
-                            └─→ for each CacheAnnotationParser
-                                │
-                                └─→ parser.parseCacheAnnotations()
-                                    │
-                                    └─→ SpringCacheAnnotationParser
-                                        │
-                                        ├─→ 解析@Cacheable
-                                        ├─→ 解析@CacheEvict
-                                        ├─→ 解析@CachePut
-                                        └─→ 解析@Caching
-                                            │
-                                            └─→ 构建CacheOperation对象
-                                                │
-                                                └─→ [结果缓存] operationCache.put()
-                                                    │
-                                                    └─→ 返回最终结果
+```mermaid
+sequenceDiagram
+    participant User as 用户调用
+    participant Proxy as AOP代理
+    participant Interceptor as CacheInterceptor
+    participant Source as CacheOperationSource
+    participant Abstract as AbstractFallbackCacheOperationSource
+    participant Cache as operationCache
+    participant Annotation as AnnotationCacheOperationSource
+    participant Parser as CacheAnnotationParser
+    participant Spring as SpringCacheAnnotationParser
+
+    User->>Proxy: 方法调用
+    Proxy->>Interceptor: invoke()
+    Interceptor->>Source: getCacheOperations(method, targetClass)
+    Source->>Abstract: getCacheOperations()
+
+    Abstract->>Cache: get(cacheKey)
+    alt 缓存命中
+        Cache-->>Abstract: 返回缓存结果
+        Abstract-->>Interceptor: 返回CacheOperation集合
+    else 缓存未命中
+        Abstract->>Abstract: computeCacheOperations()
+        Abstract->>Abstract: 公共方法验证
+        Abstract->>Abstract: getMostSpecificMethod()
+
+        loop 四级回退查找
+            Abstract->>Annotation: findCacheOperations()
+            Annotation->>Annotation: determineCacheOperations()
+
+            loop 遍历解析器
+                Annotation->>Parser: parseCacheAnnotations()
+                Parser->>Spring: 具体解析实现
+
+                Spring->>Spring: 解析@Cacheable
+                Spring->>Spring: 解析@CacheEvict
+                Spring->>Spring: 解析@CachePut
+                Spring->>Spring: 解析@Caching
+                Spring->>Spring: 构建CacheOperation对象
+                Spring-->>Parser: 返回操作集合
+                Parser-->>Annotation: 返回结果
+            end
+
+            Annotation-->>Abstract: 返回合并结果
+        end
+
+        Abstract->>Cache: put(cacheKey, result)
+        Abstract-->>Interceptor: 返回最终结果
+    end
+
+    Interceptor-->>User: 执行缓存逻辑
 ```
 
 ### 关键调用路径详解
@@ -597,6 +646,74 @@ if (cacheable != null) {
 ```
 
 ## 设计模式深度解析
+
+**Spring Cache 架构中应用的设计模式总览：**
+
+```mermaid
+graph TB
+    subgraph "Spring Cache 设计模式架构"
+        A[Spring Cache 框架]
+    end
+
+    subgraph "策略模式 Strategy Pattern"
+        B[CacheOperationSource 接口]
+        C[CacheAnnotationParser 接口]
+        D[多种注解解析策略]
+        E[可插拔的解析器]
+        B --> C
+        C --> D
+        D --> E
+    end
+
+    subgraph "模板方法模式 Template Method Pattern"
+        F[AbstractFallbackCacheOperationSource]
+        G[算法骨架定义]
+        H[钩子方法扩展]
+        I[强制子类实现]
+        F --> G
+        G --> H
+        H --> I
+    end
+
+    subgraph "组合模式 Composite Pattern"
+        J[多解析器组合]
+        K[统一接口处理]
+        L[透明性设计]
+        M[动态添加移除]
+        J --> K
+        K --> L
+        L --> M
+    end
+
+    subgraph "单例模式 Singleton Pattern"
+        N[NULL_CACHING_MARKER]
+        O[空结果标记]
+        P[内存优化]
+        N --> O
+        O --> P
+    end
+
+    subgraph "建造者模式 Builder Pattern"
+        Q[CacheOperation 构建]
+        R[链式调用]
+        S[参数验证]
+        Q --> R
+        R --> S
+    end
+
+    A --> B
+    A --> F
+    A --> J
+    A --> N
+    A --> Q
+
+    style A fill:#e1f5fe,stroke:#01579b,stroke-width:3px
+    style B fill:#fff3e0,stroke:#e65100
+    style F fill:#f3e5f5,stroke:#4a148c
+    style J fill:#e8f5e8,stroke:#1b5e20
+    style N fill:#fff8e1,stroke:#f57f17
+    style Q fill:#fce4ec,stroke:#880e4f
+```
 
 ### 1. 模板方法模式在AbstractFallbackCacheOperationSource中的应用
 
@@ -704,6 +821,38 @@ private final Map<Class<?>, Boolean> candidateCache;
 // 第三级：注解查找结果缓存（在AnnotationUtils中）
 ```
 
+**多级缓存架构图：**
+
+```mermaid
+graph TD
+    A[请求: getCacheOperations] --> B{第一级缓存检查<br/>operationCache}
+
+    B -->|缓存命中| C[返回缓存的CacheOperation集合]
+    B -->|缓存未命中| D{第二级缓存检查<br/>candidateCache}
+
+    D -->|非候选类| E[返回 null<br/>避免进一步处理]
+    D -->|是候选类或未知| F[开始注解解析流程]
+
+    F --> G{第三级缓存检查<br/>AnnotationUtils缓存}
+    G -->|注解缓存命中| H[使用缓存的注解信息]
+    G -->|注解缓存未命中| I[执行反射注解查找]
+
+    H --> J[解析为CacheOperation]
+    I --> K[缓存注解查找结果]
+    K --> J
+
+    J --> L[缓存操作解析结果<br/>operationCache.put]
+    L --> M[返回CacheOperation集合]
+
+    style A fill:#e3f2fd
+    style C fill:#c8e6c9
+    style E fill:#ffecb3
+    style M fill:#c8e6c9
+    style B fill:#fff3e0
+    style D fill:#f3e5f5
+    style G fill:#e8f5e8
+```
+
 **缓存键设计：**
 
 ```java
@@ -778,6 +927,54 @@ return Collections.unmodifiableList(ops);  // 返回不可变视图，防止意�
 2. **自定义注解支持**：处理Redis特定的缓存注解
 3. **全面验证**：提供健壮的错误检查和日志记录
 4. **复合注解处理**：支持复杂的注解组合
+
+**RedisCacheOperationSource 架构图：**
+
+```mermaid
+graph TB
+    subgraph "Spring Cache 核心"
+        A[AbstractFallbackCacheOperationSource<br/>抽象骨架实现]
+        B[AnnotationCacheOperationSource<br/>注解解析实现]
+        A --> B
+    end
+
+    subgraph "自定义扩展"
+        C[RedisCacheOperationSource<br/>Redis特定实现]
+        B --> C
+    end
+
+    subgraph "支持的注解"
+        D[@RedisCacheable<br/>Redis缓存注解]
+        E[@RedisCacheEvict<br/>Redis缓存清除注解]
+        F[@RedisCaching<br/>Redis复合注解]
+    end
+
+    subgraph "处理流程"
+        G[parseCacheAnnotations<br/>统一注解解析]
+        H[parseRedisCacheable<br/>解析@RedisCacheable]
+        I[parseRedisCacheEvict<br/>解析@RedisCacheEvict]
+        J[parseRedisCaching<br/>解析@RedisCaching]
+        K[validateCacheOperation<br/>验证配置]
+    end
+
+    C --> G
+    G --> H
+    G --> I
+    G --> J
+    H --> K
+    I --> K
+    J --> K
+
+    D -.-> H
+    E -.-> I
+    F -.-> J
+
+    style C fill:#e8f5e8
+    style D fill:#fff3e0
+    style E fill:#fff3e0
+    style F fill:#fff3e0
+    style K fill:#ffecb3
+```
 
 ### 实现分析
 
@@ -1096,5 +1293,59 @@ Spring Cache的CacheOperationSource体系展现了优秀的软件设计原则：
 4. **接口隔离原则**：接口设计精简且职责明确
 5. **里氏替换原则**：子类可以完全替换父类
 
-这种设计使得Spring Cache不仅功能强大，而且具有极强的扩展性和可维护性，为各种缓存场景提供了灵活的解决方案。通过理解这些核心组件的设计思想和实现细节，我们可以更好地使用Spring
-Cache，也可以借鉴这些设计模式来构建自己的可扩展系统。
+**Spring Cache 架构设计原则总览：**
+
+```mermaid
+graph LR
+    subgraph "设计原则实现"
+        A[单一职责原则<br/>Single Responsibility]
+        B[开闭原则<br/>Open-Closed]
+        C[依赖倒置原则<br/>Dependency Inversion]
+        D[接口隔离原则<br/>Interface Segregation]
+        E[里氏替换原则<br/>Liskov Substitution]
+    end
+
+    subgraph "核心组件"
+        F[CacheOperationSource<br/>顶层接口]
+        G[AbstractFallbackCacheOperationSource<br/>抽象实现]
+        H[AnnotationCacheOperationSource<br/>注解实现]
+        I[CacheAnnotationParser<br/>策略接口]
+    end
+
+    subgraph "设计模式"
+        J[策略模式<br/>Strategy]
+        K[模板方法模式<br/>Template Method]
+        L[组合模式<br/>Composite]
+        M[建造者模式<br/>Builder]
+    end
+
+    A --> F
+    A --> G
+    A --> H
+    A --> I
+
+    B --> J
+    B --> I
+
+    C --> F
+    C --> I
+
+    D --> F
+    D --> I
+
+    E --> G
+    E --> H
+
+    J --> I
+    K --> G
+    L --> H
+    M --> H
+
+    style A fill:#e3f2fd
+    style B fill:#f3e5f5
+    style C fill:#e8f5e8
+    style D fill:#fff3e0
+    style E fill:#fce4ec
+```
+
+这种设计使得Spring Cache不仅功能强大，而且具有极强的扩展性和可维护性，为各种缓存场景提供了灵活的解决方案。通过理解这些核心组件的设计思想和实现细节，我们可以更好地使用Spring Cache，也可以借鉴这些设计模式来构建自己的可扩展系统。
