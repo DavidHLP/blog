@@ -17,11 +17,11 @@ This document provides an in-depth analysis of the core source code for annotati
 
 ```mermaid
 flowchart TD
-    A["CacheInterceptor\nAOP Interceptor"] --> B["CacheOperationSource\nInterface: Defines cache operation retrieval contract"]
-    B --> C["AbstractFallbackCacheOperationSource\nAbstract class: Provides caching and fallback strategies"]
-    C --> D["AnnotationCacheOperationSource\nImplementation: Annotation-based cache operation parsing"]
-    D --> E["CacheAnnotationParser\nStrategy interface: Concrete annotation parsing strategies"]
-    E --> F["SpringCacheAnnotationParser\nImplementation: Spring standard annotation parser"]
+    A["CacheInterceptor AOP Interceptor"] --> B["CacheOperationSource Interface: Defines cache operation retrieval contract"]
+    B --> C["AbstractFallbackCacheOperationSource Abstract class: Provides caching and fallback strategies"]
+    C --> D["AnnotationCacheOperationSource Implementation: Annotation-based cache operation parsing"]
+    D --> E["CacheAnnotationParser Strategy interface: Concrete annotation parsing strategies"]
+    E --> F["SpringCacheAnnotationParser Implementation: Spring standard annotation parser"]
 
     style A fill:#e1f5fe
     style B fill:#fff3e0
@@ -279,24 +279,24 @@ flowchart TD
     A["Start cache operation lookup"] --> B["Public method check"]
     B --> C{"Only allow public methods?"}
     C -->|Yes, and method is non-public| D["Return null"]
-    C -->|No, or method is public| E["Get most specific method\ngetMostSpecificMethod"]
+    C -->|No, or method is public| E["Get most specific method getMostSpecificMethod"]
 
-    E --> F["Level 1: Find target method annotations\nfindCacheOperations - specificMethod"]
+    E --> F["Level 1: Find target method annotations findCacheOperations - specificMethod"]
     F --> G{"Found annotations?"}
     G -->|Yes| H["Return operation collection"]
 
-    G -->|No| I["Level 2: Find target class annotations\nfindCacheOperations - specificMethod.getDeclaringClass"]
+    G -->|No| I["Level 2: Find target class annotations findCacheOperations - specificMethod.getDeclaringClass"]
     I --> J{"Found annotations and is user-level method?"}
     J -->|Yes| H
 
     J -->|No| K{"specificMethod != method?"}
     K -->|No| L["Return null - lookup ended"]
 
-    K -->|Yes| M["Level 3: Find original method annotations\nfindCacheOperations - method"]
+    K -->|Yes| M["Level 3: Find original method annotations findCacheOperations - method"]
     M --> N{"Found annotations?"}
     N -->|Yes| H
 
-    N -->|No| O["Level 4: Find original method declaring class annotations\nfindCacheOperations - method.getDeclaringClass"]
+    N -->|No| O["Level 4: Find original method declaring class annotations findCacheOperations - method.getDeclaringClass"]
     O --> P{"Found annotations and is user-level method?"}
     P -->|Yes| H
     P -->|No| L
@@ -823,15 +823,15 @@ private final Map<Class<?>, Boolean> candidateCache;
 
 ```mermaid
 graph TD
-    A["请求: getCacheOperations"] --> B{"第一级缓存检查\noperationCache"}
+    A["请求: getCacheOperations"] --> B{"第一级缓存检查 operationCache"}
 
     B -->|缓存命中| C["返回缓存的CacheOperation集合"]
-    B -->|缓存未命中| D{"第二级缓存检查\ncandidateCache"}
+    B -->|缓存未命中| D{"第二级缓存检查 candidateCache"}
 
-    D -->|非候选类| E["返回 null\n避免进一步处理"]
+    D -->|非候选类| E["返回 null 避免进一步处理"]
     D -->|是候选类或未知| F["开始注解解析流程"]
 
-    F --> G{"第三级缓存检查\nAnnotationUtils缓存"}
+    F --> G{"第三级缓存检查 AnnotationUtils缓存"}
     G -->|注解缓存命中| H["使用缓存的注解信息"]
     G -->|注解缓存未命中| I["执行反射注解查找"]
 
@@ -839,7 +839,7 @@ graph TD
     I --> K["缓存注解查找结果"]
     K --> J
 
-    J --> L["缓存操作解析结果\noperationCache.put"]
+    J --> L["缓存操作解析结果 operationCache.put"]
     L --> M["返回CacheOperation集合"]
 
     style A fill:#e3f2fd
@@ -931,28 +931,28 @@ To better understand how to implement a custom `CacheOperationSource`, let's ana
 ```mermaid
 graph TB
     subgraph "Spring Cache 核心"
-        A["AbstractFallbackCacheOperationSource\n抽象骨架实现"]
-        B["AnnotationCacheOperationSource\n注解解析实现"]
+        A["AbstractFallbackCacheOperationSource 抽象骨架实现"]
+        B["AnnotationCacheOperationSource 注解解析实现"]
         A --> B
     end
 
     subgraph "自定义扩展"
-        C["RedisCacheOperationSource\nRedis特定实现"]
+        C["RedisCacheOperationSource Redis特定实现"]
         B --> C
     end
 
     subgraph "支持的注解"
-        D["@RedisCacheable\nRedis缓存注解"]
-        E["@RedisCacheEvict\nRedis缓存清除注解"]
-        F["@RedisCaching\nRedis复合注解"]
+        D["@RedisCacheable Redis缓存注解"]
+        E["@RedisCacheEvict Redis缓存清除注解"]
+        F["@RedisCaching Redis复合注解"]
     end
 
     subgraph "处理流程"
-        G["parseCacheAnnotations\n统一注解解析"]
-        H["parseRedisCacheable\n解析@RedisCacheable"]
-        I["parseRedisCacheEvict\n解析@RedisCacheEvict"]
-        J["parseRedisCaching\n解析@RedisCaching"]
-        K["validateCacheOperation\n验证配置"]
+        G["parseCacheAnnotations 统一注解解析"]
+        H["parseRedisCacheable 解析@RedisCacheable"]
+        I["parseRedisCacheEvict 解析@RedisCacheEvict"]
+        J["parseRedisCaching 解析@RedisCaching"]
+        K["validateCacheOperation 验证配置"]
     end
 
     C --> G
@@ -1296,25 +1296,25 @@ The Spring Cache CacheOperationSource system demonstrates excellent software des
 ```mermaid
 graph LR
     subgraph "Design Principle Implementation"
-        A["Single Responsibility\nPrinciple"]
-        B["Open-Closed\nPrinciple"]
-        C["Dependency Inversion\nPrinciple"]
-        D["Interface Segregation\nPrinciple"]
-        E["Liskov Substitution\nPrinciple"]
+        A["Single Responsibility Principle"]
+        B["Open-Closed Principle"]
+        C["Dependency Inversion Principle"]
+        D["Interface Segregation Principle"]
+        E["Liskov Substitution Principle"]
     end
 
     subgraph "Core Components"
-        F["CacheOperationSource\nTop-level Interface"]
-        G["AbstractFallbackCacheOperationSource\nAbstract Implementation"]
-        H["AnnotationCacheOperationSource\nAnnotation Implementation"]
-        I["CacheAnnotationParser\nStrategy Interface"]
+        F["CacheOperationSource Top-level Interface"]
+        G["AbstractFallbackCacheOperationSource Abstract Implementation"]
+        H["AnnotationCacheOperationSource Annotation Implementation"]
+        I["CacheAnnotationParser Strategy Interface"]
     end
 
     subgraph "Design Patterns"
-        J["Strategy\nPattern"]
-        K["Template Method\nPattern"]
-        L["Composite\nPattern"]
-        M["Builder\nPattern"]
+        J["Strategy Pattern"]
+        K["Template Method Pattern"]
+        L["Composite Pattern"]
+        M["Builder Pattern"]
     end
 
     A --> F
