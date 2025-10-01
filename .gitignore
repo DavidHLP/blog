@@ -1,6 +1,7 @@
 # build output
 .wrangler
 dist/
+.vercel/
 
 # generated types
 .astro/

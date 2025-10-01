@@ -19,11 +19,11 @@ Cache注解处理的核心基础设施，理解它们的设计和协作关系对
 
 ```mermaid
 flowchart TD
-    A[CacheInterceptor<br/>AOP拦截器] --> B[CacheOperationSource<br/>接口：定义缓存操作获取契约]
-    B --> C[AbstractFallbackCacheOperationSource<br/>抽象类：提供缓存和回退策略]
-    C --> D[AnnotationCacheOperationSource<br/>实现类：基于注解的缓存操作解析]
-    D --> E[CacheAnnotationParser<br/>策略接口：具体注解解析策略]
-    E --> F[SpringCacheAnnotationParser<br/>实现类：Spring标准注解解析器]
+    A["CacheInterceptor\nAOP拦截器"] --> B["CacheOperationSource\n接口：定义缓存操作获取契约"]
+    B --> C["AbstractFallbackCacheOperationSource\n抽象类：提供缓存和回退策略"]
+    C --> D["AnnotationCacheOperationSource\n实现类：基于注解的缓存操作解析"]
+    D --> E["CacheAnnotationParser\n策略接口：具体注解解析策略"]
+    E --> F["SpringCacheAnnotationParser\n实现类：Spring标准注解解析器"]
 
     style A fill:#e1f5fe
     style B fill:#fff3e0
@@ -278,28 +278,28 @@ private Collection<CacheOperation> computeCacheOperations(Method method, @Nullab
 
 ```mermaid
 flowchart TD
-    A[开始查找缓存操作] --> B[公共方法检查]
-    B --> C{是否只允许公共方法?}
-    C -->|是,且方法非公共| D[返回 null]
-    C -->|否,或方法为公共| E[获取最具体方法<br/>getMostSpecificMethod]
+    A["开始查找缓存操作"] --> B["公共方法检查"]
+    B --> C{"是否只允许公共方法?"}
+    C -->|是,且方法非公共| D["返回 null"]
+    C -->|否,或方法为公共| E["获取最具体方法\ngetMostSpecificMethod"]
 
-    E --> F[第一级: 查找目标方法注解<br/>findCacheOperations - specificMethod]
-    F --> G{找到注解?}
-    G -->|是| H[返回操作集合]
+    E --> F["第一级: 查找目标方法注解\nfindCacheOperations - specificMethod"]
+    F --> G{"找到注解?"}
+    G -->|是| H["返回操作集合"]
 
-    G -->|否| I[第二级: 查找目标类注解<br/>findCacheOperations - specificMethod.getDeclaringClass]
-    I --> J{找到注解且为用户级方法?}
+    G -->|否| I["第二级: 查找目标类注解\nfindCacheOperations - specificMethod.getDeclaringClass"]
+    I --> J{"找到注解且为用户级方法?"}
     J -->|是| H
 
-    J -->|否| K{specificMethod != method?}
-    K -->|否| L[返回 null - 查找结束]
+    J -->|否| K{"specificMethod != method?"}
+    K -->|否| L["返回 null - 查找结束"]
 
-    K -->|是| M[第三级: 查找原始方法注解<br/>findCacheOperations - method]
-    M --> N{找到注解?}
+    K -->|是| M["第三级: 查找原始方法注解\nfindCacheOperations - method"]
+    M --> N{"找到注解?"}
     N -->|是| H
 
-    N -->|否| O[第四级: 查找原始方法声明类注解<br/>findCacheOperations - method.getDeclaringClass]
-    O --> P{找到注解且为用户级方法?}
+    N -->|否| O["第四级: 查找原始方法声明类注解\nfindCacheOperations - method.getDeclaringClass"]
+    O --> P{"找到注解且为用户级方法?"}
     P -->|是| H
     P -->|否| L
 
@@ -825,24 +825,24 @@ private final Map<Class<?>, Boolean> candidateCache;
 
 ```mermaid
 graph TD
-    A[请求: getCacheOperations] --> B{第一级缓存检查<br/>operationCache}
+    A["请求: getCacheOperations"] --> B{"第一级缓存检查\noperationCache"}
 
-    B -->|缓存命中| C[返回缓存的CacheOperation集合]
-    B -->|缓存未命中| D{第二级缓存检查<br/>candidateCache}
+    B -->|缓存命中| C["返回缓存的CacheOperation集合"]
+    B -->|缓存未命中| D{"第二级缓存检查\ncandidateCache"}
 
-    D -->|非候选类| E[返回 null<br/>避免进一步处理]
-    D -->|是候选类或未知| F[开始注解解析流程]
+    D -->|非候选类| E["返回 null\n避免进一步处理"]
+    D -->|是候选类或未知| F["开始注解解析流程"]
 
-    F --> G{第三级缓存检查<br/>AnnotationUtils缓存}
-    G -->|注解缓存命中| H[使用缓存的注解信息]
-    G -->|注解缓存未命中| I[执行反射注解查找]
+    F --> G{"第三级缓存检查\nAnnotationUtils缓存"}
+    G -->|注解缓存命中| H["使用缓存的注解信息"]
+    G -->|注解缓存未命中| I["执行反射注解查找"]
 
-    H --> J[解析为CacheOperation]
-    I --> K[缓存注解查找结果]
+    H --> J["解析为CacheOperation"]
+    I --> K["缓存注解查找结果"]
     K --> J
 
-    J --> L[缓存操作解析结果<br/>operationCache.put]
-    L --> M[返回CacheOperation集合]
+    J --> L["缓存操作解析结果\noperationCache.put"]
+    L --> M["返回CacheOperation集合"]
 
     style A fill:#e3f2fd
     style C fill:#c8e6c9
@@ -933,28 +933,28 @@ return Collections.unmodifiableList(ops);  // 返回不可变视图，防止意�
 ```mermaid
 graph TB
     subgraph "Spring Cache 核心"
-        A[AbstractFallbackCacheOperationSource<br/>抽象骨架实现]
-        B[AnnotationCacheOperationSource<br/>注解解析实现]
+        A["AbstractFallbackCacheOperationSource\n抽象骨架实现"]
+        B["AnnotationCacheOperationSource\n注解解析实现"]
         A --> B
     end
 
     subgraph "自定义扩展"
-        C[RedisCacheOperationSource<br/>Redis特定实现]
+        C["RedisCacheOperationSource\nRedis特定实现"]
         B --> C
     end
 
     subgraph "支持的注解"
-        D[@RedisCacheable<br/>Redis缓存注解]
-        E[@RedisCacheEvict<br/>Redis缓存清除注解]
-        F[@RedisCaching<br/>Redis复合注解]
+        D["@RedisCacheable\nRedis缓存注解"]
+        E["@RedisCacheEvict\nRedis缓存清除注解"]
+        F["@RedisCaching\nRedis复合注解"]
     end
 
     subgraph "处理流程"
-        G[parseCacheAnnotations<br/>统一注解解析]
-        H[parseRedisCacheable<br/>解析@RedisCacheable]
-        I[parseRedisCacheEvict<br/>解析@RedisCacheEvict]
-        J[parseRedisCaching<br/>解析@RedisCaching]
-        K[validateCacheOperation<br/>验证配置]
+        G["parseCacheAnnotations\n统一注解解析"]
+        H["parseRedisCacheable\n解析@RedisCacheable"]
+        I["parseRedisCacheEvict\n解析@RedisCacheEvict"]
+        J["parseRedisCaching\n解析@RedisCaching"]
+        K["validateCacheOperation\n验证配置"]
     end
 
     C --> G
@@ -1298,25 +1298,25 @@ Spring Cache的CacheOperationSource体系展现了优秀的软件设计原则：
 ```mermaid
 graph LR
     subgraph "设计原则实现"
-        A[单一职责原则<br/>Single Responsibility]
-        B[开闭原则<br/>Open-Closed]
-        C[依赖倒置原则<br/>Dependency Inversion]
-        D[接口隔离原则<br/>Interface Segregation]
-        E[里氏替换原则<br/>Liskov Substitution]
+        A["单一职责原则\nSingle Responsibility"]
+        B["开闭原则\nOpen-Closed"]
+        C["依赖倒置原则\nDependency Inversion"]
+        D["接口隔离原则\nInterface Segregation"]
+        E["里氏替换原则\nLiskov Substitution"]
     end
 
     subgraph "核心组件"
-        F[CacheOperationSource<br/>顶层接口]
-        G[AbstractFallbackCacheOperationSource<br/>抽象实现]
-        H[AnnotationCacheOperationSource<br/>注解实现]
-        I[CacheAnnotationParser<br/>策略接口]
+        F["CacheOperationSource\n顶层接口"]
+        G["AbstractFallbackCacheOperationSource\n抽象实现"]
+        H["AnnotationCacheOperationSource\n注解实现"]
+        I["CacheAnnotationParser\n策略接口"]
     end
 
     subgraph "设计模式"
-        J[策略模式<br/>Strategy]
-        K[模板方法模式<br/>Template Method]
-        L[组合模式<br/>Composite]
-        M[建造者模式<br/>Builder]
+        J["策略模式\nStrategy"]
+        K["模板方法模式\nTemplate Method"]
+        L["组合模式\nComposite"]
+        M["建造者模式\nBuilder"]
     end
 
     A --> F

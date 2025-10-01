@@ -19,13 +19,18 @@ const title = config.title;
 
 <script>
 	import zoom from "medium-zoom/dist/pure";
+	import { initMermaid } from "$utils/mermaid-init";
 
 	window.zoom = () => zoom(".markdown img", { background: "#00000044" });
 	window.zoom();
 
 	document.addEventListener("astro:page-load", () => {
 		window.zoom();
+		initMermaid();
 	});
+
+	// 首次加载时初始化 Mermaid
+	initMermaid();
 </script>
 
 <App {title} {subtitle} {description} {article} author={typeof config.author == "string" ? config.author : config.author.name}>
