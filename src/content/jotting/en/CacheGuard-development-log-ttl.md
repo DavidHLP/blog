@@ -7,8 +7,6 @@ tags: [CacheGuard, TTL, Redis, Cache, Avalanche Protection, Development Log]
 description: Comprehensive documentation of the TTL management feature development process in the CacheGuard project, including core implementation, testing strategies, and technical highlights
 ---
 
-## CacheGuard TTL Feature Development Log
-
 ### I. Feature Overview
 
 This development cycle implemented the core TTL (Time To Live) management functionality for CacheGuard, including:

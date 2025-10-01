@@ -7,8 +7,6 @@ tags: [CacheGuard, TTL, Redis, 缓存, 雪崩防护, 开发日志]
 description: 详细记录CacheGuard项目中TTL管理功能的完整开发过程，包括核心实现、测试策略和技术亮点
 ---
 
-## CacheGuard TTL功能开发日志
-
 ### 一、功能概述
 
 本次开发实现了CacheGuard的核心TTL（Time To Live）管理功能，包括：
